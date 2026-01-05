@@ -1689,19 +1689,12 @@ function performSingleDowngrade(treeId, nodeId) {
 
     lvl.current -= 1;
 
-    if (cfg.branch && cfg.type !== "final" && state.lockedBranch === cfg.branch) {
-        let otherNodesInBranch = false;
-        Object.keys(state.levels).forEach(nId => {
-            const nCfg = getNodeConfig(nId);
-            if (nCfg && nCfg.branch === cfg.branch && nId !== nodeId &&
-                state.levels[nId].current > 0) {
-                otherNodesInBranch = true;
-            }
-        });
-        if (!otherNodesInBranch) {
-            state.lockedBranch = null;
-        }
+    // SOLO el nodo principal (main) puede desbloquear una rama cuando baja a 0
+if (cfg.branch && cfg.type === "main" && state.lockedBranch === cfg.branch) {
+    if (lvl.current <= 0) {
+        state.lockedBranch = null;
     }
+}
 
     updateNodeDisplay(treeId, nodeId);
     updateGlobalUI();
@@ -1772,16 +1765,16 @@ function handleNodeUpgrade(treeId, nodeElem) {
     if (cfg.type === "final") globalFinalPointsLeft -= 1;
     lvl.current += 1;
 
-    if (cfg.branch && cfg.type !== "final" && !state.lockedBranch) {
-        const finalNodeId = cfg.branch + "-final";
-        const finalNode = state.levels[finalNodeId];
-        const hasCompletedFinal = finalNode && finalNode.current > 0;
+    // SOLO el nodo principal (main) puede bloquear una rama cuando sube de nivel
+if (cfg.branch && cfg.type === "main" && !state.lockedBranch) {
+    const finalNodeId = cfg.branch + "-final";
+    const finalNode = state.levels[finalNodeId];
+    const hasCompletedFinal = finalNode && finalNode.current > 0;
 
-        if (!hasCompletedFinal) {
-            state.lockedBranch = cfg.branch;
-        }
+    if (!hasCompletedFinal) {
+        state.lockedBranch = cfg.branch;
     }
-
+}
     updateNodeDisplay(treeId, nodeId);
     updateGlobalUI();
 
@@ -1816,15 +1809,16 @@ function refreshAllowedDisplays(treeId) {
         const currentLvl = state.levels[id].current;
 
         if (cfg.branch && state.lockedBranch && cfg.branch !== state.lockedBranch && cfg.type !== "final") {
-            const finalNodeId = cfg.branch + "-final";
-            const finalNode = state.levels[finalNodeId];
-            const hasCompletedFinal = finalNode && finalNode.current > 0;
+    // Si hay una rama bloqueada Y esta no es la rama bloqueada
+    const finalNodeId = cfg.branch + "-final";
+    const finalNode = state.levels[finalNodeId];
+    const hasCompletedFinal = finalNode && finalNode.current > 0;
 
-            if (!hasCompletedFinal) {
-                elem.classList.add("node-locked");
-                return;
-            }
-        }
+    if (!hasCompletedFinal) {
+        elem.classList.add("node-locked");
+        return;
+    }
+}
 
         if (checkChildExceedsParent(treeId, id)) {
             elem.classList.add("node-locked");
