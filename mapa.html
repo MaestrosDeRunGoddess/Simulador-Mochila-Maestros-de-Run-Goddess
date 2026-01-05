@@ -1,0 +1,2173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simulador Mochila - Maestros de Run Goddess</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    }
+
+    body {
+    background: #050811;
+    color: #eee;
+    font-family: system-ui, sans-serif;
+    padding: 10px;
+    margin: 0;
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+    }
+
+/* LAYOUT PRINCIPAL - ÁRBOL IZQUIERDA (70%), ESTADÍSTICAS DERECHA (30%) */
+
+.main-layout {
+    display: flex;
+    width: 100%;
+    gap: 15px;
+    min-height: 75vh;
+    max-height: 80vh;
+    }
+
+/* CONTENEDOR DEL ÁRBOL (IZQUIERDA - 70%) */
+
+.tree-main-container {
+flex: 7;
+display: flex;
+flex-direction: column;
+background: rgba(20, 25, 45, 0.3);
+border-radius: 8px;
+padding: 10px;
+overflow: hidden;
+min-height: 700px;
+}
+
+/* CONTENEDOR DE ESTADÍSTICAS (DERECHA - 30%) */
+
+.stats-sidebar {
+flex: 3;
+background: rgba(20, 25, 45, 0.7);
+border-radius: 8px;
+padding: 15px;
+overflow-y: auto;
+border: 1px solid #333;
+min-width: 300px;
+max-height: 80vh;
+}
+
+.header-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+h1 {
+    margin-bottom: 4px;
+    font-size: 1.6rem;
+    text-align: center;
+}
+
+#resources {
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+#global-info {
+    margin-bottom: 15px;
+    font-size: 12px;
+    color: #ccc;
+    text-align: center;
+    max-width: 800px;
+    line-height: 1.4;
+}
+
+.tabs {
+    display: flex;
+    margin-bottom: 10px;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.tab-button {
+    padding: 5px 10px;
+    border-radius: 4px 4px 0 0;
+    border: 1px solid #444;
+    border-bottom: none;
+    background: #11727;
+    color: #eee;
+    cursor: pointer;
+    font-size: 12px;
+    min-width: 90px;
+}
+
+.tab-button.active {
+    background: #1e90ff;
+    border-color: #1e90ff;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* CONTENEDOR DEL ÁRBOL */
+.tree-container-wrapper {
+flex: 1;
+border: 1px solid #444;
+border-radius: 8px;
+background: radial-gradient(circle at center, #1c2438, #050811);
+overflow: visible;
+position: relative;
+display: flex;
+justify-content: center;
+align-items: center;
+}
+
+.tree-container {
+    position: relative;
+    transform-origin: center center;
+    transform: scale(0.8) translate(0, 0);
+    width: 100%;
+    height: 100%;
+}
+
+/* ==== NODOS - TAMAÑOS RESPONSIVOS MEJORADOS ==== */
+.node {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid #666;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    z-index: 2;
+    background: rgba(20, 25, 45, 0.95);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    width: 45px;
+    height: 45px;
+    font-size: 9px;
+    color: #ffffff;
+}
+
+.node span {
+    pointer-events: none;
+}
+
+.node-content {
+    color: #ffffff;
+    font-weight: bold;
+    line-height: 1.1;
+    padding: 2px;
+    width: 100%;
+}
+
+.node-title {
+    font-weight: bold;
+    font-size: 9px;
+    line-height: 1.15;
+    margin-bottom: 1px;
+    color: #ffffff;
+    text-shadow: 0 0 2px #000;
+}
+
+.node-subtitle {
+    font-size: 5.5px;
+    opacity: 0.9;
+    font-weight: normal;
+    line-height: 1;
+}
+
+.node-locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.7);
+}
+
+.node:hover:not(.node-locked) {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    z-index: 3;
+}
+
+/* EFECTO PARA TAP SOSTENIDO */
+.node-downgrading {
+    animation: pulse-downgrade 0.5s infinite alternate;
+    border-color: #ff4757 !important;
+}
+
+@keyframes pulse-downgrade {
+    from { box-shadow: 0 0 5px rgba(255, 71, 87, 0.5); }
+    to { box-shadow: 0 0 15px rgba(255, 71, 87, 0.8); }
+}
+
+/* Colores de ramas */
+.branch-orange {
+    background: rgba(255, 140, 0, 0.25);
+    border-color: #ff8c00;
+}
+
+.branch-blue {
+    background: rgba(30, 144, 255, 0.25);
+    border-color: #1e90ff;
+}
+
+.branch-yellow {
+    background: rgba(255, 215, 0, 0.25);
+    border-color: #ffd700;
+}
+
+.root {
+    background: rgba(0, 255, 128, 0.25);
+    border-color: #00ff80;
+    cursor: default;
+}
+
+.node-level {
+    font-size: 7px;
+    margin-top: 1px;
+    font-weight: bold;
+}
+
+.cost {
+    font-size: 5px;
+    opacity: 0.8;
+}
+
+.final-node {
+    box-shadow: 0 0 15px rgba(255, 0, 100, 0.8);
+    border-width: 2px;
+    background: rgba(255, 0, 100, 0.2);
+}
+
+/* LINEAR */
+.link {
+    position: absolute;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.4);
+    transform-origin: 0 0;
+    z-index: 1;
+}
+
+.link.orange {
+    background: rgba(255, 140, 0, 0.7);
+    height: 1.5px;
+}
+
+.link.blue {
+    background: rgba(30, 144, 255, 0.7);
+    height: 1.5px;
+}
+
+.link.yellow {
+    background: rgba(255, 215, 0, 0.7);
+    height: 1.5px;
+}
+
+/* BOTONES */
+.buttons-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    background: #1e90ff;
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+    min-width: 120px;
+}
+
+button:hover {
+    background: #347fe0;
+}
+
+#reset-all {
+    background: #ff4757;
+}
+
+#reset-all:hover {
+    background: #ff3742;
+}
+
+#reset-current {
+    background: #ffa502;
+}
+
+#reset-current:hover {
+    background: #e89c00;
+}
+
+/* ESTILOS DEL PANEL DE ESTADÍSTICAS LATERAL */
+.stats-sidebar h3 {
+    color: #1e90ff;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 16px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+/* REORGANIZADO: BONIFICACIONES ESPECÍFICAS PRIMERO */
+.specific-stats-section {
+    margin-bottom: 20px;
+}
+
+.specific-stats-section h4 {
+    color: #ff8c00;
+    margin-bottom: 10px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.specific-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.specific-stat-item {
+    background: rgba(40, 45, 65, 0.8);
+    padding: 8px 4px;
+    border-radius: 6px;
+    text-align: center;
+    border-top: 3px solid #444;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.specific-stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.specific-stat-name {
+    font-size: 10px;
+    color: #ccc;
+    margin-bottom: 4px;
+    line-height: 1.2;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.specific-stat-value {
+    font-size: 14px;
+    font-weight: bold;
+    color: #00ce9d;
+    text-shadow: 0 0 3px rgba(0, 206, 157, 0.5);
+}
+
+/* ESTADÍSTICAS GLOBALES DESPUÉS */
+.stats-global-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #444;
+}
+
+.global-stat-item {
+    background: rgba(30, 35, 55, 0.7);
+    padding: 10px;
+    border-radius: 6px;
+    border-left: 4px solid #1e90ff;
+}
+
+.global-stat-item h4 {
+    margin: 0 0 6px 0;
+    color: #ffd700;
+    font-size: 13px;
+}
+
+.global-stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00ff80;
+}
+
+.global-stat-sub {
+    font-size: 10px;
+    color: #aaa;
+    margin-top: 3px;
+}
+
+#log {
+    margin-top: 10px;
+    font-size: 12px;
+    max-width: 800px;
+    color: #ccc;
+    min-height: 40px;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 5px;
+}
+
+/* RESPONSIVE PARA MÓVIL - VERSIÓN MEJORADA */
+@media (max-width: 1200px) {
+    .main-layout {
+    flex-direction: column;
+    max-height: none;
+    min-height: auto;
+    }
+    .tree-main-container {
+    min-height: 60vh;
+    flex: none;
+    height: 60vh;
+    }
+    .stats-sidebar {
+    max-height: 40vh;
+    min-width: auto;
+    flex: none;
+    height: 40vh;
+    }
+    .specific-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    max-height: 150px;
+    }
+    
+    .node {
+    width: 75px;
+    height: 75px;
+    font-size: 10px;
+    }
+    .node-title {
+    font-size: 10px;
+    }
+    .node-level {
+    font-size: 9px;
+    }
+    .cost {
+    font-size: 8px;
+    }
+}
+
+@media (max-width: 900px) {
+    .specific-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    }
+    .tree-main-container {
+    min-height: 55vh;
+    height: 55vh;
+    }
+    
+    .node {
+    width: 70px;
+    height: 70px;
+    font-size: 9px;
+    }
+    .node-title {
+    font-size: 9px;
+    }
+    .node-level {
+    font-size: 8px;
+    }
+    .cost {
+    font-size: 7px;
+    }
+}
+
+@media (max-width: 768px) {
+    h1 {
+    font-size: 1.4rem;
+    }
+    .tabs {
+    gap: 3px;
+    }
+    .tab-button {
+    min-width: 80px;
+    font-size: 11px;
+    padding: 4px 8px;
+    }
+    
+    .buttons-container {
+    flex-wrap: wrap;
+    }
+    .stats-sidebar {
+    padding: 10px;
+    }
+    .specific-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-height: 150px;
+    }
+    
+    .node {
+    width: 65px !important;
+    height: 65px !important;
+    font-size: 9px !important;
+    padding: 3px !important;
+    }
+    .node-level {
+    font-size: 8px !important;
+    }
+    .node-title {
+    font-size: 9px !important;
+    }
+    .cost {
+    font-size: 7px !important;
+    }
+    
+    button {
+    padding: 8px 16px;
+    font-size: 14px;
+    min-width: 140px;
+    }
+}
+
+@media (max-width: 600px) {
+    .tree-main-container {
+    min-height: 50vh;
+    height: 50vh;
+    }
+    .global-stat-item {
+    padding: 8px;
+    }
+    .global-stat-value {
+    font-size: 16px;
+    }
+    
+    .node {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 8px !important;
+    padding: 3px !important;
+    }
+    .node-level {
+    font-size: 7px !important;
+    }
+    .node-title {
+    font-size: 8px !important;
+    line-height: 1.1;
+    }
+    .cost {
+    font-size: 6px !important;
+    }
+    
+    .tree-container-wrapper {
+    padding: 5px;
+    }
+}
+
+@media (max-width: 400px) {
+    .specific-stats-grid {
+    grid-template-columns: 1fr;
+    }
+    .node {
+    width: 55px !important;
+    height: 55px !important;
+    font-size: 7px !important;
+    padding: 2px !important;
+    }
+    .node-level {
+    font-size: 6px !important;
+    }
+    .node-title {
+    font-size: 7px !important;
+    padding: 0;
+    }
+    .cost {
+    font-size: 5px !important;
+    }
+    
+    .tab-button {
+    min-width: 70px;
+    font-size: 10px;
+    padding: 3px 6px;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="header-container">
+    <h1>Simulador Mochila - Maestros de Run Goddess</h1>
+    <div id="resources">
+    Puntos de tecnología: <span id="tech-points">9999999</span>
+    </div>
+    <div id="global-info">
+    Puntos globales de <b>Daño Final</b> disponibles: <span id="global-final-left">3</span><br />
+    Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.
+    </div>
+</div>
+
+<div class="tabs">
+    <button class="tab-button active" data-tab="guardian">Guardian</button>
+    <button class="tab-button" data-tab="vanguardia">Vanguardia</button>
+    <button class="tab-button" data-tab="canon">Cañón</button>
+</div>
+
+<!-- LAYOUT: ÁRBOL IZQUIERDA (70%), ESTADÍSTICAS DERECHA (30%) -->
+<div class="main-layout">
+    <!-- CONTENEDOR DEL ÁRBOL (IZQUIERDA - 70%) -->
+    <div class="tree-main-container">
+    <h3>Árbol de Habilidades - <span id="current-tab-name">Guardian</span></h3>
+    <div class="tree-container-wrapper">
+        <div id="guardian" class="tab-content active">
+        <div class="tree-container" data-tree-id="guardian"></div>
+        </div>
+        <div id="vanguardia" class="tab-content">
+        <div class="tree-container" data-tree-id="vanguardia"></div>
+        </div>
+        <div id="canon" class="tab-content">
+        <div class="tree-container" data-tree-id="canon"></div>
+        </div>
+    </div>
+    </div>
+
+    <!-- PANEL DE ESTADÍSTICAS (DERECHA - 30% - SIEMPRE VISIBLE) -->
+    <div class="stats-sidebar">
+    <h3>Estadísticas</h3>
+    
+    <!-- PRIMERO: BONIFICACIONES ESPECÍFICAS (solo stats con valor > 0) -->
+    <div class="specific-stats-section">
+        <h4>Bonificaciones Activas</h4>
+        <div class="specific-stats-grid" id="specific-stats-grid">
+        <!-- Aquí se insertarán dinámicamente los stats específicos CON VALOR > 0 -->
+        </div>
+    </div>
+    
+    <!-- DESPUÉS: ESTADÍSTICAS GLOBALES -->
+    <div class="stats-global-grid">
+        <div class="global-stat-item">
+        <h4>Total niveles invertidos</h4>
+        <div class="global-stat-value" id="total-levels">0</div>
+        <div class="global-stat-sub">Suma de todos los niveles</div>
+        </div>
+        
+        <div class="global-stat-item">
+        <h4>Total puntos gastados</h4>
+        <div class="global-stat-value" id="total-points-spent">0</div>
+        <div class="global-stat-sub">Puntos de tecnología utilizados</div>
+        </div>
+        
+        <div class="global-stat-item">
+        <h4>Nodos Finales obtenidos</h4>
+        <div class="global-stat-value" id="total-final-nodes">0 / 3</div>
+        <div class="global-stat-sub">Daños Finales completados</div>
+        </div>
+        
+        <div class="global-stat-item">
+        <h4>Ramas completadas</h4>
+        <div class="global-stat-value" id="completed-branches">0 / 9</div>
+        <div class="global-stat-sub">Ramas terminadas en todas las pestañas</div>
+        </div>
+    </div>
+    
+    <div class="buttons-container">
+        <button id="reset-current">Reiniciar pestaña</button>
+        <button id="reset-all">Reiniciar todo</button>
+    </div>
+    
+    <div id="log"></div>
+    </div>
+</div>
+
+<script>
+// ======================== VARIABLES GLOBALES ===========================
+const techPointsSpan = document.getElementById("tech-points");
+const globalFinalLeftSpan = document.getElementById("global-final-left");
+const logDiv = document.getElementById("log");
+const resetAllBtn = document.getElementById("reset-all"); 
+const resetCurrentBtn = document.getElementById("reset-current"); 
+const currentTabNameEl = document.getElementById("current-tab-name"); 
+const specificStatsGrid = document.getElementById("specific-stats-grid"); 
+ 
+// Elementos de estadísticas 
+const totalLevelsEl = document.getElementById("total-levels"); 
+const totalPointsSpentEl = document.getElementById("total-points-spent"); 
+const totalFinalNodesEl = document.getElementById("total-final-nodes"); 
+const completedBranchesEl = document.getElementById("completed-branches"); 
+ 
+let techPoints = 9999999; 
+let globalFinalPointsLeft = 3; 
+let totalPointsSpent = 0; 
+ 
+// ======================== VARIABLES PARA TAP SOSTENIDO ====================== 
+let activeDowngradeInterval = null; 
+let downgradeNodeId = null; 
+let downgradeTreeId = null; 
+let tapStartTime = 0; 
+const HOLD_DELAY = 800; 
+const DOWNGRADE_INTERVAL = 300; 
+ 
+// Variables para posiciones base (relativas) 
+let BASE_WIDTH = 900; // Tamaño base para desktop 
+let BASE_HEIGHT = 600; 
+let SCALE_FACTOR = 1; 
+let isMobile = false; 
+ 
+// Variables para posición del root (serán configuradas dinámicamente) 
+let ROOT_X_PCT, ROOT_Y_PCT; 
+ 
+// ================== LISTA COMPLETA DE STATS ESPECÍFICOS ======================== 
+const specificStats = { 
+"defensa": { name: "Defensa", total: 0, color: "#ff8c00" }, 
+"vida": { name: "Vida", total: 0, color: "#1e90ff" }, 
+"ataque": { name: "Ataque", total: 0, color: "#ffd700" }, 
+"defensa global": { name: "Defensa Global", total: 0, color: "#ff8c00" }, 
+"vida global": { name: "Vida Global", total: 0, color: "#1e90ff" }, 
+"ataque global": { name: "Ataque Global", total: 0, color: "#ffd700" }, 
+"esquivar": { name: "Esquivar", total: 0, color: "#00ce9d" }, 
+"aturdir": { name: "Aturdir", total: 0, color: "#ff6b8b" }, 
+"ignorar esquivar": { name: "Ignorar Esquivar", total: 0, color: "#9d4edd" }, 
+"ignorar aturdir": { name: "Ignorar Aturdir", total: 0, color: "#f72585" }, 
+"ignorar penetración": { name: "Ignorar Penetración", total: 0, color: "#4cc9f0" }, 
+"ignorar contraataque": { name: "Ignorar Contraataque", total: 0, color: "#4361ee" },
+"crítico de habilidad": { name: "Crítico de Habilidad", total: 0, color: "#7209b7" },
+"penetración": { name: "Penetración", total: 0, color: "#3a0ca3" },
+"golpe crítico": { name: "Golpe Crítico", total: 0, color: "#4895eF" },
+"reflejo de daño": { name: "Reflejo de Daño", total: 0, color: "#560bad" },
+"resistencia crítico habilidad": { name: "Resist. Crítico Habilidad", total: 0, color: "#b5179e" },
+"daño final": { name: "Daño Final", total: 0, color: "#f4757" }
+};
+
+const treesState = {
+guardian: { levels: {}, lockedBranch: null, unlockedNodes: new Set() },
+vanguardia: { levels: {}, lockedBranch: null, unlockedNodes: new Set() },
+canon: { levels: {}, lockedBranch: null, unlockedNodes: new Set() }
+};
+
+// --- DESCRIPCIONES POR PESTAÑA ---
+const techDescriptions = {
+"main": {
+"orange": { title: "Defensa", description: "Aumenta la defensa en 500% por nivel", stat: "defensa" },
+"blue": { title: "Vida", description: "Aumenta la vida en 500% por nivel", stat: "vida" },
+"yellow": { title: "Ataque", description: "Aumenta el ataque en 500% por nivel", stat: "ataque" }
+},
+"secondary": {
+"orange-L": { title: "Vida", description: "Aumenta la vida en 500% por nivel", stat: "vida" },
+"orange-R": { title: "Ataque", description: "Aumenta el ataque en 500% por nivel", stat: "ataque" },
+"blue-L": { title: "Ataque", description: "Aumenta el ataque en 500% por nivel", stat: "ataque" },
+"blue-R": { title: "Defensa", description: "Aumenta la defensa en 500% por nivel", stat: "defensa" },
+"yellow-L": { title: "Defensa", description: "Aumenta la defensa en 500% por nivel", stat: "defensa" },
+"yellow-R": { title: "Vida", description: "Aumenta la vida en 500% por nivel", stat: "vida" }
+},
+"tertiary": {
+"guardian": {
+"orange-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" },
+"orange-L-R": { title: "Aturdir", description: "Aumenta la probabilidad de aturdir en 0.1% por nivel", stat: "aturdir" },
+"orange-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" },
+"orange-R-R": { title: "Crítico de Habilidad", description: "Aumenta el crítico de habilidad en 4% por nivel", stat: "crítico de habilidad" },
+"blue-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" },
+"blue-L-R": { title: "Aturdir", description: "Aumenta la probabilidad de aturdir en 0.1% por nivel", stat: "aturdir" },
+"blue-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" },
+"blue-R-R": { title: "Ignorar Penetración", description: "Aumenta la resistencia a penetración en 4% por nivel", stat: "ignorar penetración" },
+"yellow-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" },
+"yellow-L-R": { title: "Ignorar Penetración", description: "Aumenta la resistencia a penetración en 4% por nivel", stat: "ignorar penetración" },
+"yellow-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" },
+"yellow-R-R": { title: "Crítico de Habilidad", description: "Aumenta el crítico de habilidad en 4% por nivel", stat: "crítico de habilidad" }
+},
+"vanguardia": {
+"orange-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" },
+"orange-L-R": { title: "Penetración", description: "Aumenta la penetración en 4% por nivel", stat: "penetración" },
+"orange-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" },
+"orange-R-R": { title: "Golpe Crítico", description: "Aumenta el golpe crítico en 4% por nivel", stat: "golpe crítico" },
+"blue-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" },
+"blue-L-R": { title: "Penetración", description: "Aumenta la penetración en 4% por nivel", stat: "penetración" },
+"blue-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" },
+"blue-R-R": { title: "Ignorar Contraataque", description: "Aumenta la resistencia a contraataque en 4% por nivel", stat: "ignorar contraataque" },
+"yellow-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" },
+"yellow-L-R": { title: "Ignorar Contraataque", description: "Aumenta la resistencia a contraataque en 4% por nivel", stat: "ignorar contraataque" },
+"yellow-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" },
+"yellow-R-R": { title: "Penetración", description: "Aumenta la penetración en 4% por nivel", stat: "penetración" }
+},
+"canon": {
+"orange-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" },
+"orange-L-R": { title: "Resistencia Crítico Habilidad", description: "Aumenta la resistencia a crítico de habilidad en 4% por nivel", stat: "resistencia crítico habilidad" }, 
+"orange-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" }, 
+"orange-R-R": { title: "Reflejo de Daño", description: "Aumenta el reflejo de daño en 4% por nivel", stat: "reflejo de daño" }, 
+"blue-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" }, 
+"blue-L-R": { title: "Reflejo de Daño", description: "Aumenta el reflejo de daño en 4% por nivel", stat: "reflejo de daño" }, 
+"blue-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" }, 
+"blue-R-R": { title: "Ignorar Aturdir", description: "Aumenta la resistencia a aturdir en 4% por nivel", stat: "ignorar aturdir" }, 
+"yellow-L-L": { title: "Esquivar", description: "Aumenta la probabilidad de esquivar en 0.1% por nivel", stat: "esquivar" }, 
+"yellow-L-R": { title: "Ignorar Aturdir", description: "Aumenta la resistencia a aturdir en 4% por nivel", stat: "ignorar aturdir" }, 
+"yellow-R-L": { title: "Ignorar Esquivar", description: "Aumenta la probabilidad de ignorar esquivar en 0.1% por nivel", stat: "ignorar esquivar" }, 
+"yellow-R-R": { title: "Resistencia Crítico Habilidad", description: "Aumenta la resistencia a crítico de habilidad en 4% por nivel", stat: "resistencia crítico habilidad" } 
+} 
+}, 
+"mid": { 
+"orange-L": { title: "Vida Global", description: "Aumenta la vida global en 20% por nivel", stat: "vida global" }, 
+"orange-R": { title: "Ataque Global", description: "Aumenta el ataque global en 20% por nivel", stat: "ataque global" }, 
+"blue-L": { title: "Ataque Global", description: "Aumenta el ataque global en 20% por nivel", stat: "ataque global" }, 
+"blue-R": { title: "Defensa Global", description: "Aumenta la defensa global en 20% por nivel", stat: "defensa global" }, 
+"yellow-L": { title: "Vida Global", description: "Aumenta la vida global en 20% por nivel", stat: "vida global" }, 
+"yellow-R": { title: "Defensa Global", description: "Aumenta la defensa global en 20% por nivel", stat: "defensa global" } 
+}, 
+"final": { 
+"orange": { title: "Daño Final", description: "Daño final único", stat: "daño final" }, 
+"blue": { title: "Daño Final", description: "Daño final único", stat: "daño final" }, 
+"yellow": { title: "Daño Final", description: "Daño final único", stat: "daño final" } 
+} 
+}; 
+ 
+// =============================== FUNCIONES DE UTILIDAD =============================== 
+function setLog(msg) {
+    logDiv.textContent = msg;
+    setTimeout(() => {
+        if (logDiv.textContent == msg) {
+            logDiv.textContent = "";
+        }
+    }, 3000);
+}
+
+function updateGlobalUI() {
+    techPointsSpan.textContent = techPoints;
+    globalFinalLeftSpan.textContent = globalFinalPointsLeft;
+    updateGlobalStats();
+}
+
+function updateSpecificStatsDisplay() {
+    specificStatsGrid.innerHTML = "";
+    const statsWithValue = Object.entries(specificStats)
+        .filter(([key, stat]) => stat.total > 0)
+        .sort((a, b) => b[1].total - a[1].total);
+
+    if (statsWithValue.length == 0) {
+        const emptyMsg = document.createElement("div");
+        emptyMsg.style.textAlign = "center";
+        emptyMsg.style.color = "#888";
+        emptyMsg.style.fontSize = "12px";
+        emptyMsg.style.padding = "10px";
+        emptyMsg.textContent = "No hay bonificaciones activas";
+        specificStatsGrid.appendChild(emptyMsg);
+        return;
+    }
+
+    statsWithValue.forEach(([key, stat]) => {
+        const statElem = createSpecificStatElement(key, stat);
+        specificStatsGrid.appendChild(statElem);
+    });
+}
+
+function createSpecificStatElement(key, stat) {
+    const div = document.createElement("div");
+    div.className = "specific-stat-item";
+    div.style.borderTopColor = stat.color;
+
+    const nameSpan = document.createElement("div");
+    nameSpan.className = "specific-stat-name";
+    nameSpan.textContent = stat.name;
+
+    const valueSpan = document.createElement("div");
+    valueSpan.className = "specific-stat-value";
+
+    if (key.includes("esquivar") || key.includes("aturdir") ||  
+        key.includes("ignorar esquivar") || key.includes("ignorar aturdir")) {  
+        valueSpan.textContent = `${stat.total.toFixed(1)}%`;  
+    } else if (key.includes("daño final")) {  
+        valueSpan.textContent = `${stat.total}`;  
+    } else {  
+        valueSpan.textContent = `${stat.total}%`;  
+    }  
+
+    div.appendChild(nameSpan);
+    div.appendChild(valueSpan);
+    return div;  
+}
+
+function updateGlobalStats() {  
+    let totalLevels = 0;  
+    let totalFinalNodes = 0;  
+    let completedBranches = 0;  
+
+    Object.keys(specificStats).forEach(key => {  
+        specificStats[key].total = 0;  
+    });
+
+    Object.keys(treesState).forEach(treeId => {  
+        const state = treesState[treeId];  
+        Object.keys(state.levels).forEach(nodeId => {  
+            const cfg = getNodeConfig(nodeId);  
+            if (!cfg) return;  
+
+            const current = state.levels[nodeId].current;  
+            totalLevels += current;  
+
+            const statInfo = getStatinfoForNode(treeId, nodeId, current);  
+            if (statInfo && statInfo.stat) {  
+                const statKey = statInfo.stat.toLowerCase();  
+                if (specificStats[statKey]) {  
+                    if (statKey === "daño final") {  
+                        specificStats[statKey].total += current;  
+                    } else {  
+                        specificStats[statKey].total += statInfo.value;  
+                    }  
+                } else {  
+                    console.warn(`Stat no encontrado en specificStats: "${statKey}" para nodo ${nodeId}`);  
+                }
+            }
+
+            if (cfg.type === "final" && current > 0) {
+                totalFinalNodes++;
+            }
+        });
+
+        ["orange", "blue", "yellow"].forEach(color => {
+            const finalNodeId = `${color}-final`;
+            if (state.levels[finalNodeId] && state.levels[finalNodeId].current > 0) {
+                completedBranches++;
+            }
+        });
+    });
+
+    totalLevelsEl.textContent = totalLevels;
+    totalPointsSpentEl.textContent = totalPointsSpent;
+    totalFinalNodesEl.textContent = `${totalFinalNodes}/3`;
+    completedBranchesEl.textContent = `${completedBranches}/9`;
+
+    updateSpecificStatsDisplay();
+}
+
+function getStatinfoForNode(treeId, nodeId, currentLevel) {
+    const cfg = getNodeConfig(nodeId);
+    if (!cfg) return null;
+
+    let statKey = "";
+    let valuePerLevel = 0;
+
+    if (cfg.type === "main") {
+        const desc = techDescriptions.main[cfg.branch];
+        if (desc) {
+            statKey = desc.stat.toLowerCase().trim();
+            valuePerLevel = 500;
+        }
+    } else if (cfg.type === "secondary") {
+        const side = cfg.id.includes("secL") ? "L" : "R";
+        const desc = techDescriptions.secondary[`${cfg.branch}-${side}`];
+        if (desc) {
+            statKey = desc.stat.toLowerCase().trim();
+            valuePerLevel = 500;
+        }
+    } else if (cfg.type === "tertiary") {
+        const nodeKey = getTertiaryKey(treeId, nodeId);
+
+        if (techDescriptions.tertiary[treeId] && techDescriptions.tertiary[treeId][nodeKey]) {
+            const desc = techDescriptions.tertiary[treeId][nodeKey];
+            statKey = desc.stat.toLowerCase().trim();
+
+            // Normalizar claves para que coincidan con specificStats
+            if (statKey === "daño crítico de habilidad") {
+                statKey = "crítico de habilidad";
+            } else if (statKey === "resistencia a crítico de habilidad") {
+                statKey = "resistencia crítico habilidad";
+            } else if (statKey === "resistencia a penetración") {
+                statKey = "ignorar penetración";
+            } else if (statKey === "resistencia a contrataque") {
+                statKey = "ignorar contrataque";
+            } else if (statKey === "resistencia a aturdir") {
+                statKey = "ignorar aturdir";
+            }
+
+            if (desc.title.toLowerCase().includes("esquivar") || desc.title.toLowerCase().includes("aturdir") || desc.title.toLowerCase().includes("ignorar esquivar") || desc.title.toLowerCase().includes("ignorar aturdir")) {
+                valuePerLevel = 0.1;
+            } else {
+                valuePerLevel = 4;
+            }
+        }
+    } else if (cfg.type === "mid") {
+        const side = cfg.id.includes("midL") ? "L" : "R";
+        const desc = techDescriptions.mid[`${cfg.branch}-${side}`];
+        if (desc) {
+            statKey = desc.stat.toLowerCase().trim();
+            valuePerLevel = 20;
+        }
+    } else if (cfg.type === "final") {
+        const desc = techDescriptions.final[cfg.branch];
+        if (desc) {
+            statKey = desc.stat.toLowerCase().trim();
+            valuePerLevel = 1;
+        }
+    }
+
+    if (!statKey) return null;
+
+    return {
+        stat: statKey,
+        value: currentLevel * valuePerLevel
+    };
+}
+
+function getTertiaryKey(treeId, nodeId) {
+    const parts = nodeId.split('-');
+    if (parts.length < 2) return "";
+    const color = parts[0]; // "orange", "blue", "yellow"
+    const position = parts[1]; // "terA1", "terA2", "terB1", "terB2"
+
+    let posKey = "";
+    // Mapear las posiciones a las claves usadas en techDescriptions.tertiary
+    if (position === "terA1") posKey = "L-L";
+    else if (position === "terA2") posKey = "L-R";
+    else if (position === "terB1") posKey = "R-L";
+    else if (position === "terB2") posKey = "R-R";
+    else return "";
+    return `${color}-${posKey}`;
+}
+
+function getTertiaryDisplayTitle(treeId, nodeId) {
+    const nodeKey = getTertiaryKey(treeId, nodeId);
+
+    if (techDescriptions.tertiary[treeId] && techDescriptions.tertiary[treeId][nodeKey]) {
+        const fullTitle = techDescriptions.tertiary[treeId][nodeKey].title;
+
+        // Mejores abreviaciones para móvil/desktop
+        if (isMobile) {
+            // Abreviaciones más cortas para móvil
+            if (fullTitle.includes("Esquivar")) return "Esq";
+            else if (fullTitle.includes("Aturdir")) return "Atur";
+            else if (fullTitle.includes("Ignorar Esquivar")) return "Ig.Esq";
+            else if (fullTitle.includes("Ignorar Aturdir")) return "Ig.Atu";
+            else if (fullTitle.includes("Ignorar Penetración")) return "Ig.Pen";
+            else if (fullTitle.includes("Ignorar Contraataque")) return "Ig.Com";
+            else if (fullTitle.includes("Crítico de Habilidad")) return "Crit.H";
+            else if (fullTitle.includes("Penetración")) return "Penet";
+            else if (fullTitle.includes("Golpe Crítico")) return "G.Crit";
+            else if (fullTitle.includes("Reflejo de Daño")) return "Reflejo";
+            else if (fullTitle.includes("Resistencia Crítico Habilidad")) return "R.Crit";
+            else return fullTitle.substring(0, 6);
+        } else {
+            // Títulos más completos para desktop
+            if (fullTitle.includes("Esquivar")) return "Esquivar";
+            else if (fullTitle.includes("Aturdir")) return "Aturdir";
+            else if (fullTitle.includes("Ignorar Esquivar")) return "Ign.Esq";
+            else if (fullTitle.includes("Ignorar Aturdir")) return "Ign.Atu";
+            else if (fullTitle.includes("Ignorar Penetración")) return "Ign.Penet";
+            else if (fullTitle.includes("Ignorar Contraataque")) return "Ign.Contra";
+            else if (fullTitle.includes("Crítico de Habilidad")) return "Crit.Hab";
+            else if (fullTitle.includes("Penetración")) return "Penetrac";
+            else if (fullTitle.includes("Golpe Crítico")) return "Gol.Crit";
+            else if (fullTitle.includes("Reflejo de Daño")) return "Reflejo";
+            else if (fullTitle.includes("Resistencia Crítico Habilidad")) return "Res.Crit";
+            else return fullTitle.substring(0, 8);
+        }
+    }
+
+    // Fallback si no encuentra la descripción
+    const parts = nodeId.split('-');
+    if (parts.length >= 2) {
+        const position = parts[1];
+        if (position === "terA1") return "Ter1";
+        else if (position === "terA2") return "Ter2";
+        else if (position === "terB1") return "Ter3";
+        else if (position === "terB2") return "Ter4";
+    }
+
+    return "Terc.";
+}
+
+// --- DEFINICIÓN DE NODOS CON POSICIONES RELATIVAS ---
+// Ahora las posiciones son relativas (porcentajes) para que sean responsivas
+const baseNodes = [];
+
+// Tamaños base para cálculo de posiciones
+let containerWidth = 900;
+let containerHeight = 600;
+
+function calculateAbsolutePosition(xPct, yPct) {
+    return {
+        x: (xPct / 100) * containerWidth,
+        y: (yPct / 100) * containerHeight
+    };
+}
+
+function addColorNodes(color, orientation, cssClass) {
+    // Determinar el ángulo base según la orientación
+    let baseAngle;
+    if (orientation === "NW") baseAngle = 225; // 225° (suroeste, pero ajustado para NW)
+    else if (orientation === "NE") baseAngle = 315; // 315° (noroeste)
+    else if (orientation === "S") baseAngle = 90; // 90° (directamente abajo)
+
+    // DISTANCIAS AJUSTADAS PARA PC Y MÓVIL
+    // Distancias en porcentaje del contenedor
+    const scaleFactor = 0.8;
+    const mainDistance = isMobile ? 18 : 18;    // Reducido para PC (era 22)
+    const secondaryDistance = isMobile ? 14 : 14;   // Reducido para PC (era 16)
+    const tertiaryDistance = isMobile ? 11 : 11;    // Reducido para PC (era 13)
+    const midDistance = isMobile ? 9 : 9;    // Reducido para PC (era 11)
+    const finalDistance = isMobile ? 7 : 7;    // Reducido para PC (era 9)
+
+    // ================================
+    // 1. NODO PRINCIPAL
+    // ================================
+    const mainAngleRad = baseAngle * Math.PI / 180;
+    const mainXPct = ROOT_X_PCT + Math.cos(mainAngleRad) * mainDistance;
+    const mainYPct = ROOT_Y_PCT + Math.sin(mainAngleRad) * mainDistance;
+
+    baseNodes.push({
+        id: color + "-main",
+        title: color === "orange" ? "Defensa" : color === "blue" ? "Vida" : "Ataque",
+        type: "main",
+        max: 100,
+        baseCost: 5, // Costo base para nivel 1
+        branch: color,
+        parents: ["root"],
+        xPct: mainXPct,
+        yPct: mainYPct,
+        cssClass
+    });
+
+    // ================================
+    // 2. NODOS SECUNDARIOS (L y R)
+    // ================================
+    const secLTitles = {
+        "orange": "Vida",
+        "blue": "Ataque",
+        "yellow": "Defensa"
+    };
+    const secRTitles = {
+        "orange": "Ataque",
+        "blue": "Defensa",
+        "yellow": "Vida"
+    };
+
+    // Secundario Izquierdo (-30° desde el principal)
+    const secLAngleRad = (baseAngle - 30) * Math.PI / 180;
+    const secLXPct = mainXPct + Math.cos(secLAngleRad) * secondaryDistance;
+    const secLYPct = mainYPct + Math.sin(secLAngleRad) * secondaryDistance;
+
+    baseNodes.push({ 
+        id: color + "-secL", 
+        title: secLTitles[color], 
+        type: "secondary", 
+        max: 100, 
+        baseCost: 5, // Costo base para nivel 1
+        branch: color, 
+        parents: [color + "-main"], 
+        xPct: secLXPct, 
+        yPct: secLYPct, 
+        cssClass 
+    }); 
+    
+    // Secundario Derecho (+30° desde el principal) 
+    const secRAngleRad = (baseAngle + 30) * Math.PI / 180; 
+    const secRXPct = mainXPct + Math.cos(secRAngleRad) * secondaryDistance; 
+    const secRYPct = mainYPct + Math.sin(secRAngleRad) * secondaryDistance;
+
+    baseNodes.push({ 
+        id: color + "-secR", 
+        title: secRTitles[color], 
+        type: "secondary", 
+        max: 100, 
+        baseCost: 5, // Costo base para nivel 1
+        branch: color, 
+        parents: [color + "-main"], 
+        xPct: secRXPct, 
+        yPct: secRYPct, 
+        cssClass 
+    }); 
+    
+    // ================================================================ 
+    // 3. NODOS TERCIARIOS (A1, A2, B1, B2) 
+    // ================================================================ 
+    // Terciarios A1 y A2 (hijos de secL, a ±25° desde secL) 
+    const terA1AngleRad = (baseAngle - 30 - 35) * Math.PI / 180; 
+    const terA1XPct = secLXPct + Math.cos(terA1AngleRad) * tertiaryDistance; 
+    const terA1YPct = secLYPct + Math.sin(terA1AngleRad) * tertiaryDistance;
+
+    baseNodes.push({ 
+        id: color + "-terA1", 
+        title: "Terc. A1", 
+        type: "tertiary", 
+        max: 100, 
+        baseCost: 20, // Costo base para nivel 1
+        branch: color, 
+        parents: [color + "-secL"], 
+        xPct: terA1XPct, 
+        yPct: terA1YPct, 
+        cssClass 
+    });
+
+    const terA2AngleRad = (baseAngle - 30 + 35) * Math.PI / 180; 
+    const terA2XPct = secLXPct + Math.cos(terA2AngleRad) * tertiaryDistance; 
+    const terA2YPct = secLYPct + Math.sin(terA2AngleRad) * tertiaryDistance;  
+
+    baseNodes.push({ 
+        id: color + "-terA2", 
+        title: "Terc. A2", 
+        type: "tertiary", 
+        max: 100, 
+        baseCost: 20, // Costo base para nivel 1
+        branch: color, 
+        parents: [color + "-secL"], 
+        xPct: terA2XPct, 
+        yPct: terA2YPct, 
+        cssClass 
+    });
+
+    // Terciarios B1 y B2 (hijos de secR, a ±25° desde secR) 
+    const terB1AngleRad = (baseAngle + 30 - 35) * Math.PI / 180; 
+    const terB1XPct = secRXPct + Math.cos(terB1AngleRad) * tertiaryDistance; 
+    const terB1YPct = secRYPct + Math.sin(terB1AngleRad) * tertiaryDistance;  
+
+    baseNodes.push({ 
+        id: color + "-terB1", 
+        title: "Terc. B1", 
+        type: "tertiary", 
+        max: 100, 
+        baseCost: 20, // Costo base para nivel 1
+        branch: color, 
+        parents: [color + "-secR"], 
+        xPct: terB1XPct, 
+        yPct: terB1YPct, 
+        cssClass 
+    });
+
+    const terB2AngleRad = (baseAngle + 30 + 35) * Math.PI / 180; 
+    const terB2XPct = secRXPct + Math.cos(terB2AngleRad) * tertiaryDistance; 
+    const terB2YPct = secRYPct + Math.sin(terB2AngleRad) * tertiaryDistance;  
+
+    baseNodes.push({ 
+        id: color + "-terB2", 
+        title: "Terc. B2", 
+        type: "tertiary", 
+        max: 100, 
+        baseCost: 20, // Costo base para nivel 1
+        branch: color, 
+        parents: [color + "-secR"], 
+        xPct: terB2XPct, 
+        yPct: terB2YPct, 
+        cssClass 
+    });
+
+    // ================================================================ 
+    // 4. NODOS MEDIOS (midL y midR) 
+    // ================================================================ 
+    // midL: Avanzar más en la misma dirección que secL 
+    const midLDistance = secondaryDistance + tertiaryDistance + midDistance; 
+    const midLAngle = baseAngle - 30; // Mismo ángulo que secL 
+    const midLAngleRad = midLAngle * Math.PI / 180; 
+    // Usar el nodo principal como origen, no secL 
+    const midLXPct = mainXPct + Math.cos(midLAngleRad) * midLDistance; 
+    const midLYPct = mainYPct + Math.sin(midLAngleRad) * midLDistance;
+
+    const midLTitles = { 
+        "orange": "Vida G", 
+        "blue": "Ataque G", 
+        "yellow": "Vida G" 
+    };
+
+    baseNodes.push({ 
+        id: color + "-midL", 
+        title: midLTitles[color], 
+        type: "mid", 
+        max: 50, 
+        baseCost: 150, // Costo base para nivel 1
+        branch: color, 
+        parents: [color + "-terA1", color + "-terA2"], 
+        xPct: midLXPct, 
+        yPct: midLYPct, 
+        cssClass 
+    });
+
+    // midR: Avanzar más en la misma dirección que secR 
+    const midRDistance = secondaryDistance + tertiaryDistance + midDistance; 
+    const midRAngle = baseAngle + 30; // Mismo ángulo que secR 
+    const midRAngleRad = midRAngle * Math.PI / 180; 
+    // Usar el nodo principal como origen, no secR 
+    const midRXPct = mainXPct + Math.cos(midRAngleRad) * midRDistance; 
+    const midRYPct = mainYPct + Math.sin(midRAngleRad) * midRDistance;
+
+    const midRTitles = { 
+        "orange": "Ataque G", 
+        "blue": "Defensa G", 
+        "yellow": "Defensa G" 
+    };
+
+    baseNodes.push({ 
+        id: color + "-midR", 
+        title: midRTitles[color], 
+        type: "mid", 
+        max: 50, 
+        baseCost: 150, // Costo base para nivel 1
+        branch: color, 
+        parents: [color + "-terB1", color + "-terB2"], 
+        xPct: midRXPct, 
+        yPct: midRYPct, 
+        cssClass 
+    });
+
+    // ================================================================ 
+    // 5. NODO FINAL 
+    // ================================================================ 
+    // El nodo final va en la dirección principal, aún más lejos 
+    const finalDistanceTotal = secondaryDistance + tertiaryDistance + midDistance + finalDistance; 
+    const finalAngleRad = baseAngle * Math.PI / 180; 
+    const finalXPct = mainXPct + Math.cos(finalAngleRad) * finalDistanceTotal; 
+    const finalYPct = mainYPct + Math.sin(finalAngleRad) * finalDistanceTotal;
+
+    baseNodes.push({ 
+        id: color + "-final", 
+        title: "Final", 
+        type: "final", 
+        max: 1, 
+        baseCost: 1000, // Costo fijo
+        branch: color, 
+        parents: [color + "-midL", color + "-midR"], 
+        xPct: finalXPct, 
+        yPct: finalYPct, 
+        cssClass 
+    });
+}
+
+// Inicializar nodos base
+function initializeBaseNodes() {
+    // Limpiar baseNodes existentes
+    while(baseNodes.length > 0) {
+        baseNodes.pop();
+    }
+
+    // Detectar si es móvil y configurar posición del root
+    isMobile = window.innerWidth <= 768;
+
+    // POSICIONES DIFERENTES PARA MÓVIL Y PC
+    if (isMobile) {
+        ROOT_X_PCT = 37.5; // Posición original para móvil
+        ROOT_Y_PCT = 25;
+    } else {
+        ROOT_X_PCT = 17; // Centro horizontal para PC
+        ROOT_Y_PCT = 2; // Centro vertical ajustado para PC
+    }
+
+    // Establecer tamaño del contenedor basado en la pantalla
+    const treeContainer = document.querySelector('.tree-container-wrapper');
+    if (treeContainer) {
+        containerWidth = treeContainer.clientWidth;
+        containerHeight = treeContainer.clientHeight;
+
+        // Para pantallas muy pequeñas, usar un contenedor más pequeño
+        if (containerWidth < 400) {
+            containerWidth = 400;
+        }
+        if (containerHeight < 300) {
+            containerHeight = 300;
+        }
+    }
+
+    // Agregar raíz
+    baseNodes.push({
+        id: "root",
+        title: "Centro",
+        type: "root",
+        max: 0,
+        baseCost: 0,
+        branch: null,
+        parents: [],
+        xPct: ROOT_X_PCT,
+        yPct: ROOT_Y_PCT
+    });
+
+    // Agregar los 3 colores
+    addColorNodes("orange", "NW", "branch-orange");
+    addColorNodes("blue", "NE", "branch-blue");
+    addColorNodes("yellow", "S", "branch-yellow");
+}
+
+const links = [];
+
+// --- FUNCIONES DEL ÁRBOL --- 
+function getNodeConfig(id) {
+    return baseNodes.find(n => n.id === id);
+}
+
+function getNodeElement(treeId, nodeId) {
+    return document.querySelector(
+        `.tree-container[data-tree-id="${treeId}"] .node[data-id="${nodeId}"]`
+    );
+}
+
+// ===== FUNCIÓN DE COSTOS ACTUALIZADA =====
+function calculateCurrentCost(nodeId, currentLevel) {
+    const cfg = getNodeConfig(nodeId);
+    if (!cfg) return 0;
+    
+    let cost = 0;
+    
+    switch(cfg.type) {
+        case "main":       // Nodos primarios (max: 100)
+            // Empieza en 5, aumenta +1 por nivel
+            // Nivel 1: 5, Nivel 2: 6, ..., Nivel 100: 104
+            cost = 5 + currentLevel;
+            break;
+            
+        case "secondary":  // Nodos secundarios (max: 100)
+            // Empieza en 5, aumenta +1 por nivel
+            cost = 5 + currentLevel;
+            break;
+            
+        case "tertiary":   // Nodos terciarios (max: 100)
+            // Empieza en 20, aumenta +1 por nivel
+            cost = 20 + currentLevel;
+            break;
+            
+        case "mid":        // Nodos medios (max: 50)
+            // Fórmula cuadrática: 138 + 11.5*nivel + 0.5*nivel²
+            if (currentLevel === 0) {
+                cost = 0;
+            } else if (currentLevel >= 1 && currentLevel <= 50) {
+                cost = Math.round(138 + 11.5 * currentLevel + 0.5 * currentLevel * currentLevel);
+            }
+            break;
+            
+        case "final":      // Nodo final (max: 1)
+            // Costo fijo (usa el baseCost definido en el nodo, que es 1000 según tu código)
+            cost = cfg.baseCost;
+            break;
+            
+        case "root":       // Nodo raíz
+            cost = 0;
+            break;
+            
+        default:
+            cost = cfg.baseCost || 0;
+    }
+    
+    return cost;
+}
+
+function calculateTotalSpentOnNode(nodeId, currentLevel) {
+    let total = 0;
+    for (let i = 0; i < currentLevel; i++) {
+        total += calculateCurrentCost(nodeId, i);
+    }
+    return total;
+}
+
+// --- SISTEMA DE DESBLOQUEO ===========================================================
+function getAllowedMaxForNode(treeId, nodeId) {
+    const cfg = getNodeConfig(nodeId);
+    const state = treesState[treeId];
+    const lvl = state.levels[nodeId];
+
+    if (!cfg || !lvl) return 0;
+    if (cfg.type === "root") return 0;
+    if (cfg.type === "main") return cfg.max;
+
+    if (state.unlockedNodes.has(nodeId)) {
+        if (cfg.type === "secondary") {
+            const parentId = cfg.parents[0];
+            const parentLvl = state.levels[parentId] ? state.levels[parentId].current : 0;
+            const maxFromParent = Math.floor(parentLvl / 20) * 20;
+            return Math.min(cfg.max, maxFromParent);
+        }
+
+        if (cfg.type === "tertiary") {
+            const parentId = cfg.parents[0];
+            const parentLvl = state.levels[parentId] ? state.levels[parentId].current : 0;
+            const maxFromParent = Math.floor(parentLvl / 20) * 20;
+            return Math.min(cfg.max, maxFromParent);
+        }
+
+        if (cfg.type === "mid") {
+            const [p1, p2] = cfg.parents;
+            const lvl1 = state.levels[p1] ? state.levels[p1].current : 0;
+            const lvl2 = state.levels[p2] ? state.levels[p2].current : 0;
+
+            const chunks1 = Math.floor(lvl1 / 20);
+            const chunks2 = Math.floor(lvl2 / 20);
+            const chunks = Math.min(chunks1, chunks2);
+
+            return Math.min(cfg.max, chunks * 10);
+        }
+
+        if (cfg.type === "final") {
+            const [m1, m2] = cfg.parents;
+            const lvl1 = state.levels[m1] ? state.levels[m1].current : 0;
+            const lvl2 = state.levels[m2] ? state.levels[m2].current : 0;
+
+            if (lvl1 >= 10 && lvl2 >= 10) {
+                return cfg.max;
+            }
+            return 0;
+        }
+
+        return cfg.max;
+    }
+
+    if (cfg.type === "secondary") {
+        const parentId = cfg.parents[0];
+        const parentLvl = state.levels[parentId] ? state.levels[parentId].current : 0;
+        if (parentLvl >= 20) {
+            state.unlockedNodes.add(nodeId);
+            const maxFromParent = Math.floor(parentLvl / 20) * 20;
+            return Math.min(cfg.max, maxFromParent);
+        }
+        return 0;
+    }
+
+    if (cfg.type === "tertiary") {
+        const parentId = cfg.parents[0];
+        const parentLvl = state.levels[parentId] ? state.levels[parentId].current : 0;
+        if (parentLvl >= 20) {
+            state.unlockedNodes.add(nodeId);
+            const maxFromParent = Math.floor(parentLvl / 20) * 20;
+            return Math.min(cfg.max, maxFromParent);
+        }
+        return 0;
+    }
+
+    if (cfg.type === "mid") {
+        const [p1, p2] = cfg.parents;
+        const lvl1 = state.levels[p1] ? state.levels[p1].current : 0;
+        const lvl2 = state.levels[p2] ? state.levels[p2].current : 0;
+
+        const chunks1 = Math.floor(lvl1 / 20);
+        const chunks2 = Math.floor(lvl2 / 20);
+        const chunks = Math.min(chunks1, chunks2);
+
+        if (chunks >= 1) {
+            state.unlockedNodes.add(nodeId);
+            return Math.min(cfg.max, chunks * 10);
+        }
+        return 0;
+    }
+
+    if (cfg.type === "final") {
+        const [m1, m2] = cfg.parents;
+        const lvl1 = state.levels[m1] ? state.levels[m1].current : 0;
+        const lvl2 = state.levels[m2] ? state.levels[m2].current : 0;
+
+        if (lvl1 >= 10 && lvl2 >= 10) {
+            state.unlockedNodes.add(nodeId);
+            return cfg.max;
+        }
+        return 0;
+    }
+
+    return 0;
+}
+
+function checkChildExceedsParent(treeId, childId) {
+    const cfg = getNodeConfig(childId);
+    if (!cfg || !cfg.parents || cfg.parents.length === 0) return false;
+
+    const state = treesState[treeId];
+    const childLvl = state.levels[childId] ? state.levels[childId].current : 0;
+
+    for (const parentId of cfg.parents) {
+        const parentLvl = state.levels[parentId] ? state.levels[parentId].current : 0;
+
+        if (cfg.type === "secondary" || cfg.type === "tertiary") {
+            const allowedChildLvl = Math.floor(parentLvl / 20) * 20;
+            if (childLvl > allowedChildLvl) {
+                return true;
+            }
+        } else if (cfg.type === "mid") {
+            const allowedMax = getAllowedMaxForNode(treeId, childId);
+            if (childLvl > allowedMax) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// ================================================================ SISTEMA DE TAP SOSTENIDO ================================================================
+function startDowngradeTimer(treeId, nodeId, nodeElem) {
+    tapStartTime = Date.now();
+    downgradeTreeId = treeId;
+    downgradeNodeId = nodeId;
+
+    nodeElem.classList.add('node-downgrading');
+
+    activeDowngradeInterval = setTimeout(() => {
+        activeDowngradeInterval = setInterval(() => {
+            performSingleDowngrade(treeId, nodeId);
+        }, DOWNGRADE_INTERVAL);
+    }, HOLD_DELAY);
+}
+
+function stopDowngradeTimer(nodeElem) {
+    if (activeDowngradeInterval) {
+        clearTimeout(activeDowngradeInterval);
+        clearInterval(activeDowngradeInterval);
+        activeDowngradeInterval = null;
+    }
+
+    if (nodeElem) {
+        nodeElem.classList.remove('node-downgrading');
+    }
+
+    downgradeTreeId = null;
+    downgradeNodeId = null;
+}
+
+function performSingleDowngrade(treeId, nodeId) {
+    const state = treesState[treeId];
+    const cfg = getNodeConfig(nodeId);
+    const lvl = state.levels[nodeId];
+
+    if (!lvl || lvl.current <= 0) {
+        stopDowngradeTimer(getNodeElement(treeId, nodeId));
+        return;
+    }
+
+    let canDowngrade = true;
+
+    if (cfg.type === "main") {
+        const secL = state.levels[cfg.branch + "-secL"];
+        const secR = state.levels[cfg.branch + "-secR"];
+        const newMainLevel = lvl.current - 1;
+        const newMaxForSec = Math.floor(newMainLevel / 20) * 20;
+
+        if ((secL && secL.current > newMaxForSec) ||
+            (secR && secR.current > newMaxForSec)) {
+            canDowngrade = false;
+            setLog("No puedes bajar el principal mientras los secundarios excedan el nuevo límite.");
+        }
+    } else if (cfg.type === "secondary") {
+        const isLeft = cfg.id.includes("secL");
+        const ter1 = state.levels[cfg.branch + (isLeft ? "-terA1" : "-terB1")];
+        const ter2 = state.levels[cfg.branch + (isLeft ? "-terA2" : "-terB2")];
+        const newSecLevel = lvl.current - 1;
+        const newMaxForTer = Math.floor(newSecLevel / 20) * 20;
+
+        if ((ter1 && ter1.current > newMaxForTer) ||
+            (ter2 && ter2.current > newMaxForTer)) {
+            canDowngrade = false;
+            setLog("No puedes bajar el secundario mientras los terciarios excedan el nuevo límite.");
+        }
+    } else if (cfg.type === "tertiary") {
+        const isLeft = cfg.id.includes("terA");
+        const mid = state.levels[cfg.branch + (isLeft ? "-midL" : "-midR")];
+        if (mid && mid.current > 0) {
+            canDowngrade = false;
+            setLog("No puedes bajar el terciario mientras el nodo medio tenga niveles.");
+        }
+    } else if (cfg.type === "mid") {
+        const final = state.levels[cfg.branch + "-final"];
+        if (final && final.current > 0) {
+            canDowngrade = false;
+            setLog("No puedes bajar el nodo medio mientras el final esté activo.");
+        }
+    }
+
+    if (!canDowngrade) {
+        stopDowngradeTimer(getNodeElement(treeId, nodeId));
+        return;
+    }
+
+    const refundAmount = calculateCurrentCost(nodeId, lvl.current - 1);
+    techPoints += refundAmount;
+    totalPointsSpent = Math.max(0, totalPointsSpent - refundAmount);
+
+    if (cfg.type === "final" && lvl.current >= 1) {
+        globalFinalPointsLeft += 1;
+        state.lockedBranch = cfg.branch;
+    }
+
+    lvl.current -= 1;
+
+    if (cfg.branch && cfg.type !== "final" && state.lockedBranch === cfg.branch) {
+        let otherNodesInBranch = false;
+        Object.keys(state.levels).forEach(nId => {
+            const nCfg = getNodeConfig(nId);
+            if (nCfg && nCfg.branch === cfg.branch && nId !== nodeId &&
+                state.levels[nId].current > 0) {
+                otherNodesInBranch = true;
+            }
+        });
+        if (!otherNodesInBranch) {
+            state.lockedBranch = null;
+        }
+    }
+
+    updateNodeDisplay(treeId, nodeId);
+    updateGlobalUI();
+
+    setLog(`Bajaste 1 nivel en ${cfg.title}. +${refundAmount} pts.`);
+
+    refreshAllowedDisplays(treeId);
+
+    if (lvl.current <= 0) {
+        stopDowngradeTimer(getNodeElement(treeId, nodeId));
+    }
+}
+
+// =========================== FUNCIONES DE INTERACCIÓN CON NODOS ===========================
+function handleNodeUpgrade(treeId, nodeElem) {
+    const state = treesState[treeId];
+    const nodeId = nodeElem.dataset.id;
+    const cfg = getNodeConfig(nodeId);
+    const lvl = state.levels[nodeId];
+
+    if (nodeElem.classList.contains("node-locked")) {
+        setLog("Nodo bloqueado por prerrequisitos o rama.");
+        return;
+    }
+
+    const currentCost = calculateCurrentCost(nodeId, lvl.current);
+    if (techPoints < currentCost) {
+        setLog(`Necesitas ${currentCost} puntos de tecnologia.`);
+        return;
+    }
+
+    const allowedMax = getAllowedMaxForNode(treeId, nodeId);
+    if (allowedMax <= 0) {
+        setLog("No cumples requisitos anteriores.");
+        return;
+    }
+
+    if (lvl.current >= allowedMax || lvl.current >= cfg.max) {
+        setLog("Límite alcanzado.");
+        return;
+    }
+
+    if (checkChildExceedsParent(treeId, nodeId)) {
+        setLog("No puedes subir este nodo porque superaría el límite permitido por sus padres.");
+        return;
+    }
+
+    if (cfg.branch && cfg.type !== "final") {
+        const lockedBranch = state.lockedBranch;
+        const finalNodeId = cfg.branch + "-final";
+        const finalNode = state.levels[finalNodeId];
+        const hasCompletedFinal = finalNode && finalNode.current > 0;
+
+        if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
+            setLog("Otra rama bloquea esta.");
+            return;
+        }
+    }
+
+    if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
+        setLog("No quedan Daños Finales disponibles.");
+        return;
+    }
+
+    techPoints -= currentCost;
+    totalPointsSpent += currentCost;
+
+    if (cfg.type === "final") globalFinalPointsLeft -= 1;
+    lvl.current += 1;
+
+    if (cfg.branch && cfg.type !== "final" && !state.lockedBranch) {
+        const finalNodeId = cfg.branch + "-final";
+        const finalNode = state.levels[finalNodeId];
+        const hasCompletedFinal = finalNode && finalNode.current > 0;
+
+        if (!hasCompletedFinal) {
+            state.lockedBranch = cfg.branch;
+        }
+    }
+
+    updateNodeDisplay(treeId, nodeId);
+    updateGlobalUI();
+
+    const benefit = getStatinfoForNode(treeId, nodeId, 1);
+    if (benefit) {
+        setLog(`${cfg.title} subió a nivel ${lvl.current}. +${benefit.value}%`);
+    } else {
+        setLog(`${cfg.title} subió a nivel ${lvl.current}.`);
+    }
+
+    if (cfg.type === "final" && lvl.current >= 1) {
+        state.lockedBranch = null;
+    }
+
+    refreshAllowedDisplays(treeId);
+}
+
+function refreshAllowedDisplays(treeId) {
+    const state = treesState[treeId];
+    const container = document.querySelector(
+        `.tree-container[data-tree-id="${treeId}"]`
+    );
+
+    if (!container) return;
+
+    Object.keys(state.levels).forEach(id => {
+        const cfg = getNodeConfig(id);
+        const elem = container.querySelector(`.node[data-id="${id}"]`);
+        if (!cfg || !elem || cfg.type === "root") return;
+
+        const allowedMax = getAllowedMaxForNode(treeId, id);
+        const currentLvl = state.levels[id].current;
+
+        if (cfg.branch && state.lockedBranch && cfg.branch !== state.lockedBranch && cfg.type !== "final") {
+            const finalNodeId = cfg.branch + "-final";
+            const finalNode = state.levels[finalNodeId];
+            const hasCompletedFinal = finalNode && finalNode.current > 0;
+
+            if (!hasCompletedFinal) {
+                elem.classList.add("node-locked");
+                return;
+            }
+        }
+
+        if (checkChildExceedsParent(treeId, id)) {
+            elem.classList.add("node-locked");
+            return;
+        }
+
+        if (currentLvl > 0) {
+            elem.classList.remove("node-locked");
+        } else if (allowedMax > 0) {
+            elem.classList.remove("node-locked");
+        } else {
+            elem.classList.add("node-locked");
+        }
+    });
+}
+
+// =============================== FUNCIONES DE INICIALIZACIÓN =============================================================
+function initTree(treeId) {
+    const container = document.querySelector(
+        `.tree-container[data-tree-id="${treeId}"]`
+    );
+    if (!container) return;
+
+    container.innerHTML = "";
+    const state = treesState[treeId];
+
+    if (!state.levels) state.levels = {};
+    if (!state.lockedBranch) state.lockedBranch = null;
+    if (!state.unlockedNodes) state.unlockedNodes = new Set();
+
+    // Obtener tamaño real del contenedor
+    const wrapper = container.parentElement;
+    if (wrapper) {
+        containerWidth = wrapper.clientWidth;
+        containerHeight = wrapper.clientHeight;
+
+        // Minimos para que funcione
+        if (containerWidth < 300) containerWidth = 300;
+        if (containerHeight < 200) containerHeight = 200;
+
+        container.style.width = containerWidth + "px";
+        container.style.height = containerHeight + "px";
+    }
+
+    // Actualizar baseNodes con las nuevas dimensiones
+    initializeBaseNodes();
+
+    // Limpiar y recrear links
+    links.length = 0;
+    baseNodes.forEach(cfg => {
+        if (!cfg.parents || cfg.parents.length === 0) return;
+        cfg.parents.forEach(p => {
+            links.push({ from: p, to: cfg.id });
+        });
+    });
+
+    // Crear nodos
+    baseNodes.forEach(cfg => {
+        const nodeElem = document.createElement("div");
+        nodeElem.classList.add("node");
+        if (cfg.type === "root") nodeElem.classList.add("root");
+        if (cfg.cssClass) nodeElem.classList.add(cfg.cssClass);
+        if (cfg.type === "final") nodeElem.classList.add("final-node");
+
+        // Calcular posicion absoluta
+        const x = (cfg.xPct / 100) * containerWidth;
+        const y = (cfg.yPct / 100) * containerHeight;
+
+        // Ajustar tamaño del nodo para móvil
+        let nodeSize = 80;
+        if (window.innerWidth <= 1200) {
+            nodeSize = 75;
+        }
+        if (window.innerWidth <= 900) {
+            nodeSize = 70;
+        }
+        if (window.innerWidth <= 768) {
+            nodeSize = 65;
+        }
+        if (window.innerWidth <= 600) {
+            nodeSize = 60;
+        }
+        if (window.innerWidth <= 400) {
+            nodeSize = 55;
+        }
+
+        nodeElem.style.width = nodeSize + "px";
+        nodeElem.style.height = nodeSize + "px";
+        nodeElem.style.left = (x - nodeSize/2) + "px";
+        nodeElem.style.top = (y - nodeSize/2) + "px";
+        nodeElem.dataset.id = cfg.id;
+        nodeElem.dataset.treeId = treeId;
+
+        let displayTitle = cfg.title;
+
+        // CORRECCIÓN: Para nodos terciarios, usar los títulos reales de techDescriptions
+        if (cfg.type === "tertiary") {
+            displayTitle = getTertiaryDisplayTitle(treeId, cfg.id);
+        }
+
+        const titleSpan = document.createElement("span");
+        titleSpan.classList.add("node-title");
+        titleSpan.textContent = displayTitle;
+
+        const levelSpan = document.createElement("span");
+        levelSpan.classList.add("node-level");
+        const currentLevel = state.levels[cfg.id] ? state.levels[cfg.id].current : 0;
+        levelSpan.textContent = cfg.max > 0 ? `${currentLevel}/${cfg.max}` : "-";
+
+        const costSpan = document.createElement("span");
+        costSpan.classList.add("cost");
+        const currentCost = calculateCurrentCost(cfg.id, currentLevel);
+        costSpan.textContent = `C:${currentCost}`;
+
+        nodeElem.appendChild(titleSpan);
+        nodeElem.appendChild(levelSpan);
+        nodeElem.appendChild(costSpan);
+        container.appendChild(nodeElem);
+
+        if (!state.levels[cfg.id]) {
+            state.levels[cfg.id] = { current: 0, max: cfg.max };
+        }
+
+        // Eventos para tap sostenido
+        nodeElem.addEventListener("mousedown", (e) => {
+            if (cfg.type === "root") return;
+            e.preventDefault();
+            startDowngradeTimer(treeId, cfg.id, nodeElem);
+        });
+
+        nodeElem.addEventListener("touchstart", (e) => {
+            if (cfg.type === "root") return;
+            e.preventDefault();
+            startDowngradeTimer(treeId, cfg.id, nodeElem);
+        });
+
+        // Eventos para detener
+        nodeElem.addEventListener("mouseup", (e) => {
+            e.preventDefault();
+            const holdTime = Date.now() - tapStartTime;
+            if (holdTime < HOLD_DELAY) {
+                handleNodeUpgrade(treeId, nodeElem);
+            }
+            stopDowngradeTimer(nodeElem);
+        });
+
+        nodeElem.addEventListener("mouseleave", (e) => {
+            stopDowngradeTimer(nodeElem);
+        });
+
+        nodeElem.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            const holdTime = Date.now() - tapStartTime;
+            if (holdTime < HOLD_DELAY) {
+                handleNodeUpgrade(treeId, nodeElem);
+            }
+            stopDowngradeTimer(nodeElem);
+        });
+
+        nodeElem.addEventListener("touchcancel", (e) => {
+            stopDowngradeTimer(nodeElem);
+        });
+    });
+
+    // Crear lineas
+    links.forEach(link => {
+        const fromCfg = getNodeConfig(link.from);
+        const toCfg = getNodeConfig(link.to);
+        if (!fromCfg || !toCfg) return;
+
+        const fromX = (fromCfg.xPct / 100) * containerWidth;
+        const fromY = (fromCfg.yPct / 100) * containerHeight;
+        const toX = (toCfg.xPct / 100) * containerWidth;
+        const toY = (toCfg.yPct / 100) * containerHeight;
+
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        const linkElem = document.createElement("div");
+        linkElem.classList.add("link");
+
+        if (toCfg.branch === "orange") linkElem.classList.add("orange");
+        else if (toCfg.branch === "blue") linkElem.classList.add("blue");
+        else if (toCfg.branch === "yellow") linkElem.classList.add("yellow");
+
+        linkElem.style.left = fromX + "px";
+        linkElem.style.top = fromY + "px";
+        linkElem.style.width = length + "px";
+        linkElem.style.transform = `rotate(${angle}deg)`;
+
+        container.appendChild(linkElem);
+    });
+
+    // Actualizar visual
+    refreshAllowedDisplays(treeId);
+}
+
+function updateNodeDisplay(treeId, nodeId) {
+    const cfg = getNodeConfig(nodeId);
+    const state = treesState[treeId];
+    const lvl = state.levels[nodeId];
+    const elem = getNodeElement(treeId, nodeId);
+    if (!cfg || !lvl || !elem) return;
+
+    const levelSpan = elem.querySelector(".node-level");
+    const costSpan = elem.querySelector(".cost");
+
+    if (cfg.max > 0) {
+        levelSpan.textContent = `${lvl.current}/${cfg.max}`;
+        const currentCost = calculateCurrentCost(nodeId, lvl.current);
+        costSpan.textContent = `C:${currentCost}`;
+    }
+
+    // Actualizar título si es un nodo terciario
+    if (cfg.type === "tertiary") {
+        const titleSpan = elem.querySelector(".node-title");
+        if (titleSpan) {
+            titleSpan.textContent = getTertiaryDisplayTitle(treeId, nodeId);
+        }
+    }
+}
+
+function resetAll() {
+    let totalRefund = 0;
+    Object.keys(treesState).forEach(treeId => {
+        const state = treesState[treeId];
+        Object.keys(state.levels).forEach(nodeId => {
+            const cfg = getNodeConfig(nodeId);
+            const lvl = state.levels[nodeId];
+            if (lvl.current > 0) {
+                totalRefund += calculateTotalSpentOnNode(nodeId, lvl.current);
+                if (cfg.type === "final" && lvl.current >= 1) {
+                    globalFinalPointsLeft += 1;
+                }
+            }
+        });
+    });
+
+    techPoints = 9999999 + totalRefund;
+    globalFinalPointsLeft = 3;
+    totalPointsSpent = 0;
+    updateGlobalUI();
+
+    Object.keys(treesState).forEach(treeId => {
+        treesState[treeId].levels = {};
+        treesState[treeId].lockedBranch = null;
+        treesState[treeId].unlockedNodes = new Set();
+        initTree(treeId);
+    });
+
+    setLog(`Todo reiniciado. +${totalRefund} pts recuperados.`);
+}
+
+function resetCurrentTab() {
+    const activeTab = document.querySelector('.tab-button.active');
+    if (!activeTab) return;
+
+    const tabId = activeTab.dataset.tab;
+    const state = treesState[tabId];
+
+    let totalRefund = 0;
+    Object.keys(state.levels).forEach(nodeId => {
+        const cfg = getNodeConfig(nodeId);
+        const lvl = state.levels[nodeId];
+        if (lvl.current > 0) {
+            totalRefund += calculateTotalSpentOnNode(nodeId, lvl.current);
+            if (cfg.type === "final" && lvl.current >= 1) {
+                globalFinalPointsLeft += 1;
+            }
+        }
+    });
+
+    techPoints += totalRefund;
+    totalPointsSpent = Math.max(0, totalPointsSpent - totalRefund);
+
+    state.levels = {};
+    state.lockedBranch = null;
+    state.unlockedNodes = new Set();
+    initTree(tabId);
+
+    updateGlobalUI();
+    setLog(`Pestaña ${tabId} reiniciada. +${totalRefund} pts.`);
+}
+
+// -- INICIALIZACIÓN --
+document.querySelectorAll(".tab-button").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const tabId = btn.dataset.tab;
+        document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(tabId).classList.add("active");
+
+        currentTabNameEl.textContent = tabId === "guardian" ? "Guardian" :
+                                      tabId === "vanguardia" ? "Vanguardia" : "Cañón";
+
+        // Re-inicializar el árbol con las nuevas dimensiones
+        setTimeout(() => initTree(tabId), 50);
+    });
+});
+
+// Redimensionamiento - COMPLETAMENTE RESPONSIVO
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        const activeTab = document.querySelector('.tab-button.active');
+        if (activeTab) {
+            // Re-inicializar TODOS los árboles con las nuevas dimensiones
+            ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+                initTree(treeId);
+            });
+        }
+    }, 250); // Debounce de 250ms
+});
+
+resetAllBtn.addEventListener("click", resetAll);
+resetCurrentBtn.addEventListener("click", resetCurrentTab);
+
+// Detener downgrade si se hace clic fuera
+document.addEventListener("mouseup", () => {
+    if (downgradeTreeId && downgradeNodeId) {
+        const elem = getNodeElement(downgradeTreeId, downgradeNodeId);
+        stopDowngradeTimer(elem);
+    }
+});
+document.addEventListener("touchend", (e) => {
+    if (downgradeTreeId && downgradeNodeId) {
+        const elem = getNodeElement(downgradeTreeId, downgradeNodeId);
+        stopDowngradeTimer(elem);
+    }
+});
+
+// Inicializar todos los árboles
+window.addEventListener('load', () => {
+    initializeBaseNodes(); // Primero inicializar las posiciones base
+    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+        initTree(treeId);
+    });
+    resetAll();
+});
+</script>
+</body>
+</html>
