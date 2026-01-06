@@ -612,6 +612,18 @@ button:hover {
 <body>
 <div class="header-container">
     <h1>Simulador Mochila - Maestros de Run Goddess</h1>
+    <!-- Selector de idioma -->
+<div style="margin: 10px auto 15px auto; text-align: center;">
+    <select id="language-selector" style="padding: 6px 12px; background: #1e90ff; color: white; border: 1px solid #347fe0; border-radius: 4px; cursor: pointer; font-size: 13px;">
+        <option value="es">🇪🇸 Español</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="de">🇩🇪 Deutsch</option>
+        <option value="pt">🇵🇹 Português</option>
+        <option value="zh">🇨🇳 中文 (Chinese)</option>
+    </select>
+</div>
+
     <div id="resources">
     Puntos de tecnología: <span id="tech-points">9999999</span>
     </div>
@@ -620,6 +632,7 @@ button:hover {
     Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.
     </div>
 </div>
+
 
 <div class="tabs">
     <button class="tab-button active" data-tab="guardian">Guardian</button>
@@ -631,7 +644,7 @@ button:hover {
 <div class="main-layout">
     <!-- CONTENEDOR DEL ÁRBOL (IZQUIERDA - 70%) -->
     <div class="tree-main-container">
-    <h3>Árbol de Habilidades - <span id="current-tab-name">Guardian</span></h3>
+    <center><h3>Árbol de Habilidades - <span id="current-tab-name">Guardian</span></h3></center>
     <div class="tree-container-wrapper">
         <div id="guardian" class="tab-content active">
         <div class="tree-container" data-tree-id="guardian"></div>
@@ -694,6 +707,678 @@ button:hover {
 </div>
 
 <script>
+// ======================== TRADUCCIONES ===========================
+const translations = {
+    es: {
+        // Títulos
+        "Árbol de Tecnologías": "Árbol de Tecnologías",
+        "Árbol de Habilidades - ": "Árbol de Habilidades - ",
+        
+        // Recursos
+        "Puntos de tecnología: ": "Puntos de tecnología: ",
+        "Puntos globales de <b>Daño Final</b> disponibles: ": "Puntos globales de <b>Daño Final</b> disponibles: ",
+        "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.",
+        
+        // Pestañas
+        "Guardian": "Guardian",
+        "Vanguardia": "Vanguardia",
+        "Cañón": "Cañón",
+        
+        // Estadísticas
+        "Estadísticas": "Estadísticas",
+        "Bonificaciones Activas": "Bonificaciones Activas",
+        "No hay bonificaciones activas": "No hay bonificaciones activas",
+        "Total niveles invertidos": "Total niveles invertidos",
+        "Total puntos gastados": "Total puntos gastados",
+        "Nodos Finales obtenidos": "Nodos Finales obtenidos",
+        "Ramas completadas": "Ramas completadas",
+        
+        // Subtítulos
+        "Suma de todos los niveles": "Suma de todos los niveles",
+        "Puntos de tecnología utilizados": "Puntos de tecnología utilizados",
+        "Daños Finales completados": "Daños Finales completados",
+        "Ramas terminadas en todas las pestañas": "Ramas terminadas en todas las pestañas",
+        
+        // Botones
+        "Reiniciar pestaña": "Reiniciar pestaña",
+        "Reiniciar todo": "Reiniciar todo",
+        
+        // Mensajes del log
+        "Nodo bloqueado por prerrequisitos o rama.": "Nodo bloqueado por prerrequisitos o rama.",
+        "Necesitas ": "Necesitas ",
+        " puntos de tecnologia.": " puntos de tecnologia.",
+        "No cumples requisitos anteriores.": "No cumples requisitos anteriores.",
+        "Límite alcanzado.": "Límite alcanzado.",
+        "No puedes subir este nodo porque superaría el límite permitido por sus padres.": "No puedes subir este nodo porque superaría el límite permitido por sus padres.",
+        "Otra rama bloquea esta.": "Otra rama bloquea esta.",
+        "No quedan Daños Finales disponibles.": "No quedan Daños Finales disponibles.",
+        " subió a nivel ": " subió a nivel ",
+        "Bajaste 1 nivel en ": "Bajaste 1 nivel en ",
+        " pts.": " pts.",
+        "Todo reiniciado. +": "Todo reiniciado. +",
+        " pts recuperados.": " pts recuperados.",
+        "Pestaña ": "Pestaña ",
+        " reiniciada. +": " reiniciada. +",
+        
+        // STATS ESPECÍFICOS (CORREGIDO)
+        "Defensa": "Defensa",
+        "Vida": "Vida",
+        "Ataque": "Ataque",
+        "Defensa Global": "Defensa Global",
+        "Vida Global": "Vida Global",
+        "Ataque Global": "Ataque Global",
+        "Esquivar": "Esquivar",
+        "Aturdir": "Aturdir",
+        "Ignorar Esquivar": "Ignorar Esquivar",
+        "Ignorar Aturdir": "Ignorar Aturdir",
+        "Ignorar Penetración": "Ignorar Penetración",
+        "Ignorar Contraataque": "Ignorar Contraataque",
+        "Crítico de Habilidad": "Crítico de Habilidad",
+        "Penetración": "Penetración",
+        "Golpe Crítico": "Golpe Crítico",
+        "Reflejo de Daño": "Reflejo de Daño",
+        "Resist. Crítico Habilidad": "Resist. Crítico Habilidad",  // <-- CON PUNTO
+        "Daño Final": "Daño Final",
+        
+        // NOMBRES DE NODOS
+        "Centro": "Centro",
+        "Final": "Final",
+        "Defensa G": "Defensa G",
+        "Vida G": "Vida G",
+        "Ataque G": "Ataque G",
+        
+        // ABREVIACIONES DE NODOS TERCIARIOS
+        "Esq": "Esq",
+        "Atur": "Atur",
+        "Ig.Esq": "Ig.Esq",
+        "Ig.Atu": "Ig.Atu",
+        "Ig.Pen": "Ig.Pen",
+        "Ig.Com": "Ig.Com",
+        "Crit.H": "Crit.H",
+        "Penet": "Penet",
+        "G.Crit": "G.Crit",
+        "Reflejo": "Reflejo",
+        "R.Crit": "R.Crit",
+        "Ign.Esq": "Ign.Esq",
+        "Ign.Atu": "Ign.Atu",
+        "Ign.Penet": "Ign.Penet",
+        "Ign.Contra": "Ign.Contra",
+        "Crit.Hab": "Crit.Hab",
+        "Penetrac": "Penetrac",
+        "Gol.Crit": "Gol.Crit",
+        "Res.Crit": "Res.Crit"
+    },
+    en: {
+        "Árbol de Tecnologías": "Technology Tree",
+        "Árbol de Habilidades - ": "Skill Tree - ",
+        "Puntos de tecnología: ": "Tech points: ",
+        "Puntos globales de <b>Daño Final</b> disponibles: ": "Global <b>Final Damage</b> points available: ",
+        "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Rule: when investing in a branch, the other two are locked until Final Damage is obtained.",
+        "Guardian": "Guardian",
+        "Vanguardia": "Vanguard",
+        "Cañón": "Cannon",
+        "Estadísticas": "Statistics",
+        "Bonificaciones Activas": "Active Bonuses",
+        "No hay bonificaciones activas": "No active bonuses",
+        "Total niveles invertidos": "Total levels invested",
+        "Total puntos gastados": "Total points spent",
+        "Nodos Finales obtenidos": "Final Nodes obtained",
+        "Ramas completadas": "Branches completed",
+        "Suma de todos los niveles": "Sum of all levels",
+        "Puntos de tecnología utilizados": "Tech points used",
+        "Daños Finales completados": "Final Damages completed",
+        "Ramas terminadas en todas las pestañas": "Branches completed in all tabs",
+        "Reiniciar pestaña": "Reset tab",
+        "Reiniciar todo": "Reset all",
+        "Nodo bloqueado por prerrequisitos o rama.": "Node locked by prerequisites or branch.",
+        "Necesitas ": "You need ",
+        " puntos de tecnologia.": " tech points.",
+        "No cumples requisitos anteriores.": "You don't meet previous requirements.",
+        "Límite alcanzado.": "Limit reached.",
+        "No puedes subir este nodo porque superaría el límite permitido por sus padres.": "You can't upgrade this node because it would exceed the limit allowed by its parents.",
+        "Otra rama bloquea esta.": "Another branch blocks this one.",
+        "No quedan Daños Finales disponibles.": "No Final Damages available.",
+        " subió a nivel ": " increased to level ",
+        "Bajaste 1 nivel en ": "Decreased 1 level in ",
+        " pts.": " pts.",
+        "Todo reiniciado. +": "All reset. +",
+        " pts recuperados.": " pts recovered.",
+        "Pestaña ": "Tab ",
+        " reiniciada. +": " reset. +",
+        
+        // STATS ESPECÍFICOS (CORREGIDO)
+        "Defensa": "Defense",
+        "Vida": "Life",
+        "Ataque": "Attack",
+        "Defensa Global": "Global Defense",
+        "Vida Global": "Global Life",
+        "Ataque Global": "Global Attack",
+        "Esquivar": "Dodge",
+        "Aturdir": "Stun",
+        "Ignorar Esquivar": "Ignore Dodge",
+        "Ignorar Aturdir": "Ignore Stun",
+        "Ignorar Penetración": "Ignore Penetration",
+        "Ignorar Contraataque": "Ignore Counterattack",
+        "Crítico de Habilidad": "Skill Critical",
+        "Penetración": "Penetration",
+        "Golpe Crítico": "Critical Hit",
+        "Reflejo de Daño": "Damage Reflection",
+        "Resist. Crítico Habilidad": "Resist Skill Critical",  // <-- CON PUNTO
+        "Daño Final": "Final Damage",
+        
+        // NOMBRES DE NODOS
+        "Centro": "Center",
+        "Final": "Final",
+        "Defensa G": "Defense G",
+        "Vida G": "Life G",
+        "Ataque G": "Attack G",
+        
+        // ABREVIACIONES DE NODOS TERCIARIOS
+        "Esq": "Dodge",
+        "Atur": "Stun",
+        "Ig.Esq": "Ig.Dodge",
+        "Ig.Atu": "Ig.Stun",
+        "Ig.Pen": "Ig.Penet",
+        "Ig.Com": "Ig.Counter",
+        "Crit.H": "Skill Crit",
+        "Penet": "Penet",
+        "G.Crit": "Crit Hit",
+        "Reflejo": "Reflect",
+        "R.Crit": "Res.Crit",
+        "Ign.Esq": "Ign.Dodge",
+        "Ign.Atu": "Ign.Stun",
+        "Ign.Penet": "Ign.Penet",
+        "Ign.Contra": "Ign.Counter",
+        "Crit.Hab": "Skill Crit",
+        "Penetrac": "Penetration",
+        "Gol.Crit": "Crit Hit",
+        "Res.Crit": "Res.Crit"
+    },
+    fr: {
+        "Árbol de Tecnologías": "Arbre Technologique",
+        "Árbol de Habilidades - ": "Arbre de Compétences - ",
+        "Puntos de tecnología: ": "Points technologiques: ",
+        "Puntos globales de <b>Daño Final</b> disponibles: ": "Points de <b>Dégâts Finaux</b> disponibles: ",
+        "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Règle : en investissant dans une branche, les deux autres sont bloquées jusqu'à l'obtention des Dégâts Finaux.",
+        "Guardian": "Gardien",
+        "Vanguardia": "Avant-garde",
+        "Cañón": "Canon",
+        "Estadísticas": "Statistiques",
+        "Bonificaciones Activas": "Bonus Actifs",
+        "No hay bonificaciones activas": "Aucun bonus actif",
+        "Total niveles invertidos": "Niveaux totaux investis",
+        "Total puntos gastados": "Points totaux dépensés",
+        "Nodos Finales obtenidos": "Nœuds Finaux obtenus",
+        "Ramas completadas": "Branches terminées",
+        "Suma de todos los niveles": "Somme de tous les niveaux",
+        "Puntos de tecnología utilizados": "Points technologiques utilisés",
+        "Daños Finales completados": "Dégâts Finaux complétés",
+        "Ramas terminadas en todas las pestañas": "Branches terminées dans tous les onglets",
+        "Reiniciar pestaña": "Réinitialiser l'onglet",
+        "Reiniciar todo": "Tout réinitialiser",
+        "Nodo bloqueado por prerrequisitos o rama.": "Nœud bloqué par prérequis ou branche.",
+        "Necesitas ": "Tu as besoin de ",
+        " puntos de tecnologia.": " points technologiques.",
+        "No cumples requisitos anteriores.": "Tu ne remplis pas les conditions requises.",
+        "Límite alcanzado.": "Limite atteinte.",
+        "No puedes subir este nodo porque superaría el límite permitido por sus parents.": "Tu ne peux pas monter ce nœud car il dépasserait la limite autorisée par ses parents.",
+        "Otra rama bloquea esta.": "Une autre branche bloque celle-ci.",
+        "No quedan Daños Finales disponibles.": "Plus de Dégâts Finaux disponibles.",
+        " subió a nivel ": " augmenté au niveau ",
+        "Bajaste 1 nivel en ": "Baissé de 1 niveau dans ",
+        " pts.": " pts.",
+        "Todo reiniciado. +": "Tout réinitialisé. +",
+        " pts recuperados.": " pts récupérés.",
+        "Pestaña ": "Onglet ",
+        " reiniciada. +": " réinitialisé. +",
+        
+        // STATS ESPECÍFICOS (CORREGIDO)
+        "Defensa": "Défense",
+        "Vida": "Vie",
+        "Ataque": "Attaque",
+        "Defensa Global": "Défense Globale",
+        "Vida Global": "Vie Globale",
+        "Ataque Global": "Attaque Globale",
+        "Esquivar": "Esquive",
+        "Aturdir": "Étourdir",
+        "Ignorar Esquivar": "Ignorer Esquive",
+        "Ignorar Aturdir": "Ignorer Étourdir",
+        "Ignorar Penetración": "Ignorer Pénétration",
+        "Ignorar Contraataque": "Ignorer Contre-attaque",
+        "Crítico de Habilidad": "Critique Compétence",
+        "Penetración": "Pénétration",
+        "Golpe Crítico": "Coup Critique",
+        "Reflejo de Daño": "Réflexion Dégâts",
+        "Resist. Crítico Habilidad": "Résist Critique Comp",  // <-- CON PUNTO
+        "Daño Final": "Dégâts Finaux",
+        
+        // NOMBRES DE NODOS
+        "Centro": "Centre",
+        "Final": "Final",
+        "Defensa G": "Défense G",
+        "Vida G": "Vie G",
+        "Ataque G": "Attaque G",
+        
+        // ABREVIACIONES DE NODOS TERCIARIOS
+        "Esq": "Esq",
+        "Atur": "Étourd",
+        "Ig.Esq": "Ig.Esq",
+        "Ig.Atu": "Ig.Étourd",
+        "Ig.Pen": "Ig.Pénét",
+        "Ig.Com": "Ig.Contre",
+        "Crit.H": "Crit.Comp",
+        "Penet": "Pénét",
+        "G.Crit": "Coup Crit",
+        "Reflejo": "Réflexion",
+        "R.Crit": "Rés.Crit",
+        "Ign.Esq": "Ign.Esq",
+        "Ign.Atu": "Ign.Étourd",
+        "Ign.Penet": "Ign.Pénét",
+        "Ign.Contra": "Ign.Contre",
+        "Crit.Hab": "Crit.Comp",
+        "Penetrac": "Pénétration",
+        "Gol.Crit": "Coup Crit",
+        "Res.Crit": "Rés.Crit"
+    },
+    de: {
+        "Árbol de Tecnologías": "Technologiebaum",
+        "Árbol de Habilidades - ": "Fähigkeitenbaum - ",
+        "Puntos de tecnología: ": "Technologiepunkte: ",
+        "Puntos globales de <b>Daño Final</b> disponibles: ": "Globale <b>Endschaden</b>-Punkte verfügbar: ",
+        "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Regel: Bei Investition in einen Zweig sind die anderen beiden gesperrt, bis Endschaden erreicht ist.",
+        "Guardian": "Wächter",
+        "Vanguardia": "Vorhut",
+        "Cañón": "Kanone",
+        "Estadísticas": "Statistiken",
+        "Bonificaciones Activas": "Aktive Boni",
+        "No hay bonificaciones activas": "Keine aktiven Boni",
+        "Total niveles invertidos": "Gesamt investierte Stufen",
+        "Total puntos gastados": "Gesamt ausgegebene Punkte",
+        "Nodos Finales obtenidos": "Erhaltene Endknoten",
+        "Ramas completadas": "Abgeschlossene Zweige",
+        "Suma de todos los niveles": "Summe aller Stufen",
+        "Puntos de tecnología utilizados": "Verwendete Technologiepunkte",
+        "Daños Finales completados": "Abgeschlossene Endschäden",
+        "Ramas terminadas en todas las pestañas": "Zweige in allen Tabs abgeschlossen",
+        "Reiniciar pestaña": "Tab zurücksetzen",
+        "Reiniciar todo": "Alles zurücksetzen",
+        "Nodo bloqueado por prerrequisitos o rama.": "Knoten durch Voraussetzungen oder Zweig gesperrt.",
+        "Necesitas ": "Du benötigst ",
+        " puntos de tecnologia.": " Technologiepunkte.",
+        "No cumples requisitos anteriores.": "Du erfüllst die Voraussetzungen nicht.",
+        "Límite alcanzado.": "Limit erreicht.",
+        "No puedes subir este nodo porque superaría el límite permitido por sus padres.": "Du kannst diesen Knoten nicht verbessern, da er das von seinen Eltern erlaubte Limit überschreiten würde.",
+        "Otra rama bloquea esta.": "Ein anderer Zweig blockiert diesen.",
+        "No quedan Daños Finales disponibles.": "Keine Endschäden verfügbar.",
+        " subió a nivel ": " erhöht auf Stufe ",
+        "Bajaste 1 nivel en ": "Um 1 Stufe verringert in ",
+        " pts.": " Pkt.",
+        "Todo reiniciado. +": "Alles zurückgesetzt. +",
+        " pts recuperados.": " Pkt. wiederhergestellt.",
+        "Pestaña ": "Tab ",
+        " reiniciada. +": " zurückgesetzt. +",
+        
+        // STATS ESPECÍFICOS (CORREGIDO)
+        "Defensa": "Verteidigung",
+        "Vida": "Leben",
+        "Ataque": "Angriff",
+        "Defensa Global": "Globale Verteidigung",
+        "Vida Global": "Globales Leben",
+        "Ataque Global": "Globaler Angriff",
+        "Esquivar": "Ausweichen",
+        "Aturdir": "Betäuben",
+        "Ignorar Esquivar": "Ausweichen ignorieren",
+        "Ignorar Aturdir": "Betäuben ignorieren",
+        "Ignorar Penetración": "Durchdringen ignorieren",
+        "Ignorar Contraataque": "Kontern ignorieren",
+        "Crítico de Habilidad": "Fertigkeit Kritisch",
+        "Penetración": "Durchdringen",
+        "Golpe Crítico": "Kritischer Treffer",
+        "Reflejo de Daño": "Schadensreflexion",
+        "Resist. Crítico Habilidad": "Resist Fert. Kritisch",  // <-- CON PUNTO
+        "Daño Final": "Endschaden",
+        
+        // NOMBRES DE NODOS
+        "Centro": "Zentrum",
+        "Final": "Final",
+        "Defensa G": "Verteidigung G",
+        "Vida G": "Leben G",
+        "Ataque G": "Angriff G",
+        
+        // ABREVIACIONES DE NODOS TERCIARIOS
+        "Esq": "Ausw",
+        "Atur": "Betäub",
+        "Ig.Esq": "Ig.Ausw",
+        "Ig.Atu": "Ig.Betäub",
+        "Ig.Pen": "Ig.Durchdr",
+        "Ig.Com": "Ig.Konter",
+        "Crit.H": "Fert.Crit",
+        "Penet": "Durchdr",
+        "G.Crit": "Krit.Treff",
+        "Reflejo": "Reflexion",
+        "R.Crit": "Res.Crit",
+        "Ign.Esq": "Ign.Ausw",
+        "Ign.Atu": "Ign.Betäub",
+        "Ign.Penet": "Ign.Durchdr",
+        "Ign.Contra": "Ign.Konter",
+        "Crit.Hab": "Fert.Crit",
+        "Penetrac": "Durchdring",
+        "Gol.Crit": "Krit.Treff",
+        "Res.Crit": "Res.Crit"
+    },
+    pt: {
+        "Árbol de Tecnologías": "Árvore Tecnológica",
+        "Árbol de Habilidades - ": "Árvore de Habilidades - ",
+        "Puntos de tecnología: ": "Pontos de tecnologia: ",
+        "Puntos globales de <b>Daño Final</b> disponibles: ": "Pontos globais de <b>Dano Final</b> disponíveis: ",
+        "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Regra: ao investir em um ramo, os outros dois são bloqueados até obter o Dano Final.",
+        "Guardian": "Guardião",
+        "Vanguardia": "Vanguarda",
+        "Cañón": "Canhão",
+        "Estadísticas": "Estatísticas",
+        "Bonificaciones Activas": "Bônus Ativos",
+        "No hay bonificaciones activas": "Nenhum bônus ativo",
+        "Total niveles invertidos": "Total de níveis investidos",
+        "Total puntos gastados": "Total de pontos gastos",
+        "Nodos Finales obtenidos": "Nós Finais obtidos",
+        "Ramas completadas": "Ramos completados",
+        "Suma de todos os níveis": "Soma de todos os níveis",
+        "Puntos de tecnología utilizados": "Pontos de tecnologia usados",
+        "Daños Finales completados": "Danos Finais completados",
+        "Ramas terminadas en todas las pestañas": "Ramos terminados em todas as abas",
+        "Reiniciar pestaña": "Reiniciar aba",
+        "Reiniciar todo": "Reiniciar tudo",
+        "Nodo bloqueado por prerrequisitos o rama.": "Nó bloqueado por pré-requisitos ou ramo.",
+        "Necesitas ": "Você precisa de ",
+        " puntos de tecnologia.": " pontos de tecnologia.",
+        "No cumples requisitos anteriores.": "Você não cumpre os requisitos anteriores.",
+        "Límite alcanzado.": "Limite alcançado.",
+        "No puedes subir este nodo porque superaría el límite permitido por sus padres.": "Você não pode subir este nó porque excederia o limite permitido por seus pais.",
+        "Otra rama bloquea esta.": "Outro ramo bloqueia este.",
+        "No quedan Daños Finales disponibles.": "Não há Danos Finais disponíveis.",
+        " subió a nivel ": " aumentou para o nível ",
+        "Bajaste 1 nivel en ": "Diminuiu 1 nível em ",
+        " pts.": " pts.",
+        "Todo reiniciado. +": "Tudo reiniciado. +",
+        " pts recuperados.": " pts recuperados.",
+        "Pestaña ": "Aba ",
+        " reiniciada. +": " reiniciada. +",
+        
+        // STATS ESPECÍFICOS (CORREGIDO)
+        "Defensa": "Defesa",
+        "Vida": "Vida",
+        "Ataque": "Ataque",
+        "Defensa Global": "Defesa Global",
+        "Vida Global": "Vida Global",
+        "Ataque Global": "Ataque Global",
+        "Esquivar": "Esquiva",
+        "Aturdir": "Atordoar",
+        "Ignorar Esquivar": "Ignorar Esquiva",
+        "Ignorar Aturdir": "Ignorar Atordoar",
+        "Ignorar Penetración": "Ignorar Penetração",
+        "Ignorar Contraataque": "Ignorar Contra-ataque",
+        "Crítico de Habilidad": "Crítico de Habilidade",
+        "Penetración": "Penetração",
+        "Golpe Crítico": "Golpe Crítico",
+        "Reflejo de Daño": "Reflexo de Dano",
+        "Resist. Crítico Habilidad": "Resist. Crítico Hab",  // <-- CON PUNTO
+        "Daño Final": "Dano Final",
+        
+        // NOMBRES DE NODOS
+        "Centro": "Centro",
+        "Final": "Final",
+        "Defensa G": "Defesa G",
+        "Vida G": "Vida G",
+        "Ataque G": "Ataque G",
+        
+        // ABREVIACIONES DE NODOS TERCIARIOS
+        "Esq": "Esquiv",
+        "Atur": "Atordoar",
+        "Ig.Esq": "Ig.Esquiv",
+        "Ig.Atu": "Ig.Atord",
+        "Ig.Pen": "Ig.Penetr",
+        "Ig.Com": "Ig.Contra",
+        "Crit.H": "Crit.Hab",
+        "Penet": "Penetr",
+        "G.Crit": "Gol.Crit",
+        "Reflejo": "Reflexo",
+        "R.Crit": "Res.Crit",
+        "Ign.Esq": "Ign.Esquiv",
+        "Ign.Atu": "Ign.Atord",
+        "Ign.Penet": "Ign.Penetr",
+        "Ign.Contra": "Ign.Contra",
+        "Crit.Hab": "Crit.Hab",
+        "Penetrac": "Penetração",
+        "Gol.Crit": "Gol.Crit",
+        "Res.Crit": "Res.Crit"
+    },
+    zh: {
+        "Árbol de Tecnologías": "科技树",
+        "Árbol de Habilidades - ": "技能树 - ",
+        "Puntos de tecnología: ": "科技点: ",
+        "Puntos globales de <b>Daño Final</b> disponibles: ": "全局<b>最终伤害</b>点数可用: ",
+        "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "规则：投资一个分支时，其他两个分支将被锁定，直到获得最终伤害。",
+        "Guardian": "守护者",
+        "Vanguardia": "先锋",
+        "Cañón": "加农炮",
+        "Estadísticas": "统计数据",
+        "Bonificaciones Activas": "生效加成",
+        "No hay bonificaciones activas": "无生效加成",
+        "Total niveles invertidos": "总投入等级",
+        "Total puntos gastados": "总花费点数",
+        "Nodos Finales obtenidos": "获得最终节点",
+        "Ramas completadas": "完成分支",
+        "Suma de todos los niveles": "所有等级总和",
+        "Puntos de tecnología utilizados": "已用科技点",
+        "Daños Finales completados": "完成最终伤害",
+        "Ramas terminadas en todas las pestañas": "所有标签页中完成的分支",
+        "Reiniciar pestaña": "重置标签页",
+        "Reiniciar todo": "重置全部",
+        "Nodo bloqueado por prerrequisitos o rama.": "节点因先决条件或分支而被锁定。",
+        "Necesitas ": "你需要",
+        " puntos de tecnologia.": "科技点。",
+        "No cumples requisitos anteriores.": "你不满足先决条件。",
+        "Límite alcanzado.": "已达到限制。",
+        "No puedes subir este nodo porque superaría el límite permitido por sus padres.": "你无法升级此节点，因为将超过其父节点允许的限制。",
+        "Otra rama bloquea esta.": "另一个分支锁定了此分支。",
+        "No quedan Daños Finales disponibles.": "没有可用的最终伤害。",
+        " subió a nivel ": " 提升到等级 ",
+        "Bajaste 1 nivel en ": "在降低了1级 ",
+        " pts.": " 点。",
+        "Todo reiniciado. +": "全部已重置。+",
+        " pts recuperados.": " 点已恢复。",
+        "Pestaña ": "标签页",
+        " reiniciada. +": " 已重置。+",
+        
+        // STATS ESPECÍFICOS (CORREGIDO)
+        "Defensa": "防御",
+        "Vida": "生命",
+        "Ataque": "攻击",
+        "Defensa Global": "全局防御",
+        "Vida Global": "全局生命",
+        "Ataque Global": "全局攻击",
+        "Esquivar": "闪避",
+        "Aturdir": "眩晕",
+        "Ignorar Esquivar": "无视闪避",
+        "Ignorar Aturdir": "无视眩晕",
+        "Ignorar Penetración": "无视穿透",
+        "Ignorar Contraataque": "无视反击",
+        "Crítico de Habilidad": "技能暴击",
+        "Penetración": "穿透",
+        "Golpe Crítico": "暴击",
+        "Reflejo de Daño": "伤害反射",
+        "Resist. Crítico Habilidad": "抗技能暴击",  // <-- CON PUNTO
+        "Daño Final": "最终伤害",
+        
+        // NOMBRES DE NODOS
+        "Centro": "中心",
+        "Final": "最终",
+        "Defensa G": "防御 G",
+        "Vida G": "生命 G",
+        "Ataque G": "攻击 G",
+        
+        // ABREVIACIONES DE NODOS TERCIARIOS
+        "Esq": "闪避",
+        "Atur": "眩晕",
+        "Ig.Esq": "无视闪避",
+        "Ig.Atu": "无视眩晕",
+        "Ig.Pen": "无视穿透",
+        "Ig.Com": "无视反击",
+        "Crit.H": "技能暴击",
+        "Penet": "穿透",
+        "G.Crit": "暴击",
+        "Reflejo": "反射",
+        "R.Crit": "抗暴击",
+        "Ign.Esq": "无视闪避",
+        "Ign.Atu": "无视眩晕",
+        "Ign.Penet": "无视穿透",
+        "Ign.Contra": "无视反击",
+        "Crit.Hab": "技能暴击",
+        "Penetrac": "穿透",
+        "Gol.Crit": "暴击",
+        "Res.Crit": "抗暴击"
+    }
+};
+// ======================== FUNCIÓN DE CAMBIO DE IDIOMA ===========================
+function changeLanguage(lang) {
+    const texts = translations[lang] || translations.es;
+    
+    // 1. Título principal
+    const h1 = document.querySelector('h1');
+    if (h1) h1.textContent = texts["Árbol de Tecnologías"];
+    
+    // 2. Recursos
+    const techPointsSpan = document.getElementById('tech-points');
+    if (techPointsSpan) {
+        const points = techPointsSpan.textContent;
+        document.querySelector('#resources').innerHTML = texts["Puntos de tecnología: "] + `<span id="tech-points">${points}</span>`;
+    }
+    
+    // 3. Información global
+    const finalLeftSpan = document.getElementById('global-final-left');
+    if (finalLeftSpan) {
+        const finalPoints = finalLeftSpan.textContent;
+        document.querySelector('#global-info').innerHTML = texts["Puntos globales de <b>Daño Final</b> disponibles: "] + 
+            `<span id="global-final-left">${finalPoints}</span><br />` + 
+            texts["Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final."];
+    }
+    
+    // 4. Pestañas
+    document.querySelectorAll('.tab-button').forEach((btn, i) => {
+        const tabNames = ["Guardian", "Vanguardia", "Cañón"];
+        if (i < tabNames.length) {
+            btn.textContent = texts[tabNames[i]];
+        }
+    });
+    
+    // 5. Título del árbol actual
+    const currentTabNameEl = document.getElementById('current-tab-name');
+    const activeTabBtn = document.querySelector('.tab-button.active');
+    if (currentTabNameEl && activeTabBtn) {
+        currentTabNameEl.textContent = activeTabBtn.textContent;
+    }
+    
+    // 6. Panel de estadísticas
+    const statsTitle = document.querySelector('.stats-sidebar h3');
+    if (statsTitle) statsTitle.textContent = texts["Estadísticas"];
+    
+    const bonusesTitle = document.querySelector('.specific-stats-section h4');
+    if (bonusesTitle) bonusesTitle.textContent = texts["Bonificaciones Activas"];
+    
+    // 7. Estadísticas globales
+    const globalTitles = document.querySelectorAll('.global-stat-item h4');
+    if (globalTitles.length >= 4) {
+        globalTitles[0].textContent = texts["Total niveles invertidos"];
+        globalTitles[1].textContent = texts["Total puntos gastados"];
+        globalTitles[2].textContent = texts["Nodos Finales obtenidos"];
+        globalTitles[3].textContent = texts["Ramas completadas"];
+    }
+    
+    const globalSubs = document.querySelectorAll('.global-stat-sub');
+    if (globalSubs.length >= 4) {
+        globalSubs[0].textContent = texts["Suma de todos los niveles"];
+        globalSubs[1].textContent = texts["Puntos de tecnología utilizados"];
+        globalSubs[2].textContent = texts["Daños Finales completados"];
+        globalSubs[3].textContent = texts["Ramas terminadas en todas las pestañas"];
+    }
+    
+    // 8. Botones
+    const resetCurrent = document.getElementById('reset-current');
+    const resetAll = document.getElementById('reset-all');
+    if (resetCurrent) resetCurrent.textContent = texts["Reiniciar pestaña"];
+    if (resetAll) resetAll.textContent = texts["Reiniciar todo"];
+    
+    // 9. Traducir nombres de nodos en TODOS los árboles
+    const allTreeIds = ['guardian', 'vanguardia', 'canon'];
+    allTreeIds.forEach(treeId => {
+        translateTreeNodes(treeId, texts);
+    });
+    
+    // 10. Asegurar que todos los stats tengan originalName
+    Object.keys(specificStats).forEach(key => {
+        const stat = specificStats[key];
+        if (!stat.originalName) {
+            stat.originalName = stat.name;
+        }
+    });
+    
+    // 11. GUARDAR IDIOMA PRIMERO - ESTO ES CLAVE
+    localStorage.setItem('tech-tree-language', lang);
+    
+    // 12. Actualizar display de stats
+    updateSpecificStatsDisplay();
+}
+// Traducir Nodos
+function translateTreeNodes(treeId, texts) {
+    const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
+    if (!container) return;
+    
+    // Traducir nodos existentes
+    const nodes = container.querySelectorAll('.node');
+    
+    nodes.forEach(node => {
+        const nodeId = node.dataset.id;
+        const cfg = getNodeConfig(nodeId);
+        if (!cfg) return;
+        
+        let translatedTitle = cfg.title;
+        
+        // Traducir según el tipo de nodo
+        if (cfg.type === "root") {
+            translatedTitle = texts["Centro"] || "Centro";
+        }
+        else if (cfg.type === "main") {
+            if (cfg.title === "Defensa") translatedTitle = texts["Defensa"] || "Defensa";
+            else if (cfg.title === "Vida") translatedTitle = texts["Vida"] || "Vida";
+            else if (cfg.title === "Ataque") translatedTitle = texts["Ataque"] || "Ataque";
+        }
+        else if (cfg.type === "secondary") {
+            if (cfg.title === "Defensa") translatedTitle = texts["Defensa"] || "Defensa";
+            else if (cfg.title === "Vida") translatedTitle = texts["Vida"] || "Vida";
+            else if (cfg.title === "Ataque") translatedTitle = texts["Ataque"] || "Ataque";
+        }
+        else if (cfg.type === "mid") {
+            if (cfg.title === "Defensa G") translatedTitle = texts["Defensa G"] || "Defensa G";
+            else if (cfg.title === "Vida G") translatedTitle = texts["Vida G"] || "Vida G";
+            else if (cfg.title === "Ataque G") translatedTitle = texts["Ataque G"] || "Ataque G";
+        }
+        else if (cfg.type === "final") {
+            translatedTitle = texts["Final"] || "Final";
+        }
+        else if (cfg.type === "tertiary") {
+            // Los nodos terciarios ya se traducen en getTertiaryDisplayTitle
+            translatedTitle = getTertiaryDisplayTitle(treeId, nodeId);
+        }
+        
+        // Actualizar el título en el nodo - SIEMPRE, aunque sea igual
+        const titleSpan = node.querySelector('.node-title');
+        if (titleSpan) {
+            // FORZAR la actualización siempre
+            titleSpan.textContent = translatedTitle;
+        }
+    });
+}
+// Fin de la traducción de nodos
 // ======================== VARIABLES GLOBALES ===========================
 const techPointsSpan = document.getElementById("tech-points");
 const globalFinalLeftSpan = document.getElementById("global-final-left");
@@ -731,25 +1416,26 @@ let isMobile = false;
 let ROOT_X_PCT, ROOT_Y_PCT; 
  
 // ================== LISTA COMPLETA DE STATS ESPECÍFICOS ======================== 
+// ================== LISTA COMPLETA DE STATS ESPECÍFICOS ======================== 
 const specificStats = { 
-"defensa": { name: "Defensa", total: 0, color: "#ff8c00" }, 
-"vida": { name: "Vida", total: 0, color: "#1e90ff" }, 
-"ataque": { name: "Ataque", total: 0, color: "#ffd700" }, 
-"defensa global": { name: "Defensa Global", total: 0, color: "#ff8c00" }, 
-"vida global": { name: "Vida Global", total: 0, color: "#1e90ff" }, 
-"ataque global": { name: "Ataque Global", total: 0, color: "#ffd700" }, 
-"esquivar": { name: "Esquivar", total: 0, color: "#00ce9d" }, 
-"aturdir": { name: "Aturdir", total: 0, color: "#ff6b8b" }, 
-"ignorar esquivar": { name: "Ignorar Esquivar", total: 0, color: "#9d4edd" }, 
-"ignorar aturdir": { name: "Ignorar Aturdir", total: 0, color: "#f72585" }, 
-"ignorar penetración": { name: "Ignorar Penetración", total: 0, color: "#4cc9f0" }, 
-"ignorar contraataque": { name: "Ignorar Contraataque", total: 0, color: "#4361ee" },
-"crítico de habilidad": { name: "Crítico de Habilidad", total: 0, color: "#7209b7" },
-"penetración": { name: "Penetración", total: 0, color: "#3a0ca3" },
-"golpe crítico": { name: "Golpe Crítico", total: 0, color: "#4895eF" },
-"reflejo de daño": { name: "Reflejo de Daño", total: 0, color: "#560bad" },
-"resistencia crítico habilidad": { name: "Resist. Crítico Habilidad", total: 0, color: "#b5179e" },
-"daño final": { name: "Daño Final", total: 0, color: "#f4757" }
+"defensa": { name: "Defensa", originalName: "Defensa", total: 0, color: "#ff8c00" }, 
+"vida": { name: "Vida", originalName: "Vida", total: 0, color: "#1e90ff" }, 
+"ataque": { name: "Ataque", originalName: "Ataque", total: 0, color: "#ffd700" }, 
+"defensa global": { name: "Defensa Global", originalName: "Defensa Global", total: 0, color: "#ff8c00" }, 
+"vida global": { name: "Vida Global", originalName: "Vida Global", total: 0, color: "#1e90ff" }, 
+"ataque global": { name: "Ataque Global", originalName: "Ataque Global", total: 0, color: "#ffd700" }, 
+"esquivar": { name: "Esquivar", originalName: "Esquivar", total: 0, color: "#00ce9d" }, 
+"aturdir": { name: "Aturdir", originalName: "Aturdir", total: 0, color: "#ff6b8b" }, 
+"ignorar esquivar": { name: "Ignorar Esquivar", originalName: "Ignorar Esquivar", total: 0, color: "#9d4edd" }, 
+"ignorar aturdir": { name: "Ignorar Aturdir", originalName: "Ignorar Aturdir", total: 0, color: "#f72585" }, 
+"ignorar penetración": { name: "Ignorar Penetración", originalName: "Ignorar Penetración", total: 0, color: "#4cc9f0" }, 
+"ignorar contraataque": { name: "Ignorar Contraataque", originalName: "Ignorar Contraataque", total: 0, color: "#4361ee" },
+"crítico de habilidad": { name: "Crítico de Habilidad", originalName: "Crítico de Habilidad", total: 0, color: "#7209b7" },
+"penetración": { name: "Penetración", originalName: "Penetración", total: 0, color: "#3a0ca3" },
+"golpe crítico": { name: "Golpe Crítico", originalName: "Golpe Crítico", total: 0, color: "#4895eF" },
+"reflejo de daño": { name: "Reflejo de Daño", originalName: "Reflejo de Daño", total: 0, color: "#560bad" },
+"resistencia crítico habilidad": { name: "Resist. Crítico Habilidad", originalName: "Resist. Crítico Habilidad", total: 0, color: "#b5179e" },
+"daño final": { name: "Daño Final", originalName: "Daño Final", total: 0, color: "#f4757" }
 };
 
 const treesState = {
@@ -834,9 +1520,68 @@ const techDescriptions = {
  
 // =============================== FUNCIONES DE UTILIDAD =============================== 
 function setLog(msg) {
-    logDiv.textContent = msg;
+    // Obtener siempre el idioma ACTUAL del localStorage
+    const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+    const texts = translations[currentLang] || translations.es;
+    
+    let translatedMsg = msg;
+    
+    // Traducir mensajes comunes
+    if (msg === "Nodo bloqueado por prerrequisitos o rama.") {
+        translatedMsg = texts["Nodo bloqueado por prerrequisitos o rama."];
+    }
+    else if (msg.startsWith("Necesitas") && msg.includes("puntos de tecnologia.")) {
+        const match = msg.match(/Necesitas (\d+) puntos de tecnologia\./);
+        if (match) {
+            translatedMsg = texts["Necesitas "] + match[1] + texts[" puntos de tecnologia."];
+        }
+    }
+    else if (msg === "No cumples requisitos anteriores.") {
+        translatedMsg = texts["No cumples requisitos anteriores."];
+    }
+    else if (msg === "Límite alcanzado.") {
+        translatedMsg = texts["Límite alcanzado."];
+    }
+    else if (msg === "No puedes subir este nodo porque superaría el límite permitido por sus padres.") {
+        translatedMsg = texts["No puedes subir este nodo porque superaría el límite permitido por sus padres."];
+    }
+    else if (msg === "Otra rama bloquea esta.") {
+        translatedMsg = texts["Otra rama bloquea esta."];
+    }
+    else if (msg === "No quedan Daños Finales disponibles.") {
+        translatedMsg = texts["No quedan Daños Finales disponibles."];
+    }
+    else if (msg.includes(" subió a nivel ")) {
+        const parts = msg.split(" subió a nivel ");
+        if (parts.length === 2) {
+            const nodeName = parts[0];
+            const level = parts[1].replace(".", "");
+            translatedMsg = nodeName + texts[" subió a nivel "] + level + ".";
+        }
+    }
+    else if (msg.startsWith("Bajaste 1 nivel en ")) {
+        const match = msg.match(/Bajaste 1 nivel en (\w+)\. \+(\d+) pts\./);
+        if (match) {
+            translatedMsg = texts["Bajaste 1 nivel en "] + match[1] + ". +" + match[2] + texts[" pts."];
+        }
+    }
+    else if (msg.startsWith("Todo reiniciado. +")) {
+        const match = msg.match(/Todo reiniciado\. \+(\d+) pts recuperados\./);
+        if (match) {
+            translatedMsg = texts["Todo reiniciado. +"] + match[1] + texts[" pts recuperados."];
+        }
+    }
+    else if (msg.includes("Pestaña") && msg.includes("reiniciada. +")) {
+        const match = msg.match(/Pestaña (\w+) reiniciada\. \+(\d+) pts\./);
+        if (match) {
+            translatedMsg = texts["Pestaña "] + match[1] + texts[" reiniciada. +"] + match[2] + texts[" pts."];
+        }
+    }
+    // Para mensajes con porcentajes (ej: "+500%") dejamos el original
+    
+    logDiv.textContent = translatedMsg;
     setTimeout(() => {
-        if (logDiv.textContent == msg) {
+        if (logDiv.textContent == translatedMsg) {
             logDiv.textContent = "";
         }
     }, 3000);
@@ -860,17 +1605,51 @@ function updateSpecificStatsDisplay() {
         emptyMsg.style.color = "#888";
         emptyMsg.style.fontSize = "12px";
         emptyMsg.style.padding = "10px";
-        emptyMsg.textContent = "No hay bonificaciones activas";
+        
+        // Obtener idioma actual del localStorage
+        const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+        const texts = translations[currentLang] || translations.es;
+        emptyMsg.textContent = texts["No hay bonificaciones activas"];
+        
         specificStatsGrid.appendChild(emptyMsg);
         return;
     }
 
+    // Obtener idioma actual para traducir nombres de stats
+    const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+    const texts = translations[currentLang] || translations.es;
+
     statsWithValue.forEach(([key, stat]) => {
-        const statElem = createSpecificStatElement(key, stat);
-        specificStatsGrid.appendChild(statElem);
+        // Usar originalName para buscar la traducción correcta
+        const translatedName = texts[stat.originalName] || stat.originalName;
+        
+        // Crear elemento con nombre traducido
+        const div = document.createElement("div");
+        div.className = "specific-stat-item";
+        div.style.borderTopColor = stat.color;
+
+        const nameSpan = document.createElement("div");
+        nameSpan.className = "specific-stat-name";
+        nameSpan.textContent = translatedName;
+
+        const valueSpan = document.createElement("div");
+        valueSpan.className = "specific-stat-value";
+
+        // Formatear el valor según el tipo de stat
+        if (key.includes("esquivar") || key.includes("aturdir") ||  
+            key.includes("ignorar esquivar") || key.includes("ignorar aturdir")) {  
+            valueSpan.textContent = `${stat.total.toFixed(1)}%`;  
+        } else if (key.includes("daño final")) {  
+            valueSpan.textContent = `${stat.total}`;  
+        } else {  
+            valueSpan.textContent = `${stat.total}%`;  
+        }  
+
+        div.appendChild(nameSpan);
+        div.appendChild(valueSpan);
+        specificStatsGrid.appendChild(div);
     });
 }
-
 function createSpecificStatElement(key, stat) {
     const div = document.createElement("div");
     div.className = "specific-stat-item";
@@ -878,7 +1657,11 @@ function createSpecificStatElement(key, stat) {
 
     const nameSpan = document.createElement("div");
     nameSpan.className = "specific-stat-name";
-    nameSpan.textContent = stat.name;
+    
+    // Obtener nombre traducido usando originalName
+    const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+    const texts = translations[currentLang] || translations.es;
+    nameSpan.textContent = texts[stat.originalName] || stat.originalName;
 
     const valueSpan = document.createElement("div");
     valueSpan.className = "specific-stat-value";
@@ -898,10 +1681,14 @@ function createSpecificStatElement(key, stat) {
 }
 
 function updateGlobalStats() {  
+    // Obtener idioma actual
+    const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+    
     let totalLevels = 0;  
     let totalFinalNodes = 0;  
     let completedBranches = 0;  
 
+    // Resetear todos los stats
     Object.keys(specificStats).forEach(key => {  
         specificStats[key].total = 0;  
     });
@@ -1040,36 +1827,75 @@ function getTertiaryDisplayTitle(treeId, nodeId) {
 
     if (techDescriptions.tertiary[treeId] && techDescriptions.tertiary[treeId][nodeKey]) {
         const fullTitle = techDescriptions.tertiary[treeId][nodeKey].title;
+        
+        // Obtener idioma actual
+        const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+        const texts = translations[currentLang] || translations.es;
+        
+        // Buscar traducción del título completo primero
+        let translatedTitle = texts[fullTitle];
+        
+        // Si no hay traducción exacta, intentar con las abreviaciones
+        if (!translatedTitle) {
+            // Mapeo de títulos completos a sus versiones abreviadas
+            const titleMap = {
+                "Esquivar": "Esq",
+                "Aturdir": "Atur", 
+                "Ignorar Esquivar": "Ig.Esq",
+                "Ignorar Aturdir": "Ig.Atu",
+                "Ignorar Penetración": "Ig.Pen",
+                "Ignorar Contraataque": "Ig.Com",
+                "Crítico de Habilidad": "Crit.H",
+                "Penetración": "Penet",
+                "Golpe Crítico": "G.Crit",
+                "Reflejo de Daño": "Reflejo",
+                "Resistencia Crítico Habilidad": "R.Crit"
+            };
+            
+            // Buscar título en el mapa
+            for (const [key, short] of Object.entries(titleMap)) {
+                if (fullTitle.includes(key)) {
+                    // Buscar traducción de la versión corta
+                    translatedTitle = texts[short] || short;
+                    break;
+                }
+            }
+        }
+        
+        // Si aún no hay traducción, usar el original
+        if (!translatedTitle) {
+            translatedTitle = fullTitle;
+        }
 
         // Mejores abreviaciones para móvil/desktop
         if (isMobile) {
             // Abreviaciones más cortas para móvil
-            if (fullTitle.includes("Esquivar")) return "Esq";
-            else if (fullTitle.includes("Aturdir")) return "Atur";
-            else if (fullTitle.includes("Ignorar Esquivar")) return "Ig.Esq";
-            else if (fullTitle.includes("Ignorar Aturdir")) return "Ig.Atu";
-            else if (fullTitle.includes("Ignorar Penetración")) return "Ig.Pen";
-            else if (fullTitle.includes("Ignorar Contraataque")) return "Ig.Com";
-            else if (fullTitle.includes("Crítico de Habilidad")) return "Crit.H";
-            else if (fullTitle.includes("Penetración")) return "Penet";
-            else if (fullTitle.includes("Golpe Crítico")) return "G.Crit";
-            else if (fullTitle.includes("Reflejo de Daño")) return "Reflejo";
-            else if (fullTitle.includes("Resistencia Crítico Habilidad")) return "R.Crit";
-            else return fullTitle.substring(0, 6);
+            if (fullTitle.includes("Esquivar")) return texts["Esq"] || "Esq";
+            else if (fullTitle.includes("Aturdir")) return texts["Atur"] || "Atur";
+            else if (fullTitle.includes("Ignorar Esquivar")) return texts["Ig.Esq"] || "Ig.Esq";
+            else if (fullTitle.includes("Ignorar Aturdir")) return texts["Ig.Atu"] || "Ig.Atu";
+            else if (fullTitle.includes("Ignorar Penetración")) return texts["Ig.Pen"] || "Ig.Pen";
+            else if (fullTitle.includes("Ignorar Contraataque")) return texts["Ig.Com"] || "Ig.Com";
+            else if (fullTitle.includes("Crítico de Habilidad")) return texts["Crit.H"] || "Crit.H";
+            else if (fullTitle.includes("Penetración")) return texts["Penet"] || "Penet";
+            else if (fullTitle.includes("Golpe Crítico")) return texts["G.Crit"] || "G.Crit";
+            else if (fullTitle.includes("Reflejo de Daño")) return texts["Reflejo"] || "Reflejo";
+            else if (fullTitle.includes("Resistencia Crítico Habilidad")) return texts["R.Crit"] || "R.Crit";
+            else return texts[translatedTitle.substring(0, 6)] || translatedTitle.substring(0, 6); // <-- CAMBIADO
         } else {
             // Títulos más completos para desktop
-            if (fullTitle.includes("Esquivar")) return "Esquivar";
-            else if (fullTitle.includes("Aturdir")) return "Aturdir";
-            else if (fullTitle.includes("Ignorar Esquivar")) return "Ign.Esq";
-            else if (fullTitle.includes("Ignorar Aturdir")) return "Ign.Atu";
-            else if (fullTitle.includes("Ignorar Penetración")) return "Ign.Penet";
-            else if (fullTitle.includes("Ignorar Contraataque")) return "Ign.Contra";
-            else if (fullTitle.includes("Crítico de Habilidad")) return "Crit.Hab";
-            else if (fullTitle.includes("Penetración")) return "Penetrac";
-            else if (fullTitle.includes("Golpe Crítico")) return "Gol.Crit";
-            else if (fullTitle.includes("Reflejo de Daño")) return "Reflejo";
-            else if (fullTitle.includes("Resistencia Crítico Habilidad")) return "Res.Crit";
-            else return fullTitle.substring(0, 8);
+            if (fullTitle.includes("Esquivar")) return texts["Esquivar"] || "Esquivar";
+            else if (fullTitle.includes("Aturdir")) return texts["Aturdir"] || "Aturdir";
+            else if (fullTitle.includes("Ignorar Esquivar")) return texts["Ign.Esq"] || "Ign.Esq";
+            else if (fullTitle.includes("Ignorar Aturdir")) return texts["Ign.Atu"] || "Ign.Atu";
+            else if (fullTitle.includes("Ignorar Penetración")) return texts["Ign.Penet"] || "Ign.Penet";
+            else if (fullTitle.includes("Ignorar Contraataque")) return texts["Ign.Contra"] || "Ign.Contra";
+            else if (fullTitle.includes("Crítico de Habilidad")) return texts["Crit.Hab"] || "Crit.Hab";
+            else if (fullTitle.includes("Penetración")) return texts["Penetrac"] || "Penetrac";
+            else if (fullTitle.includes("Golpe Crítico")) return texts["Gol.Crit"] || "Gol.Crit";
+            else if (fullTitle.includes("Reflejo de Daño")) return texts["Reflejo"] || "Reflejo";
+            else if (fullTitle.includes("Resistencia Crítico Habilidad")) return texts["Res.Crit"] || "Res.Crit";
+            else return texts[translatedTitle.substring(0, 8)] || translatedTitle.substring(0, 8); // <-- CAMBIADO
         }
     }
 
@@ -2114,11 +2940,18 @@ document.querySelectorAll(".tab-button").forEach(btn => {
         btn.classList.add("active");
         document.getElementById(tabId).classList.add("active");
 
-        currentTabNameEl.textContent = tabId === "guardian" ? "Guardian" :
-                                      tabId === "vanguardia" ? "Vanguardia" : "Cañón";
+        // Traducir nombre de la pestaña activa
+        const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+        const texts = translations[currentLang] || translations.es;
+        if (tabId === "guardian") currentTabNameEl.textContent = texts["Guardian"];
+        else if (tabId === "vanguardia") currentTabNameEl.textContent = texts["Vanguardia"];
+        else currentTabNameEl.textContent = texts["Cañón"];
 
         // Re-inicializar el árbol con las nuevas dimensiones
         setTimeout(() => initTree(tabId), 50);
+        
+        // Traducir nodos en la nueva pestaña
+        translateTreeNodes(tabId, texts);
     });
 });
 
@@ -2155,12 +2988,53 @@ document.addEventListener("touchend", (e) => {
 });
 
 // Inicializar todos los árboles
+// Traductor
+// ======================== INICIALIZACIÓN DE TRADUCCIÓN ===========================
+function initTranslation() {
+    console.log("Inicializando traducción...");
+    
+    const langSelector = document.getElementById('language-selector');
+    
+    if (!langSelector) {
+        console.error("❌ No se encontró el selector de idioma");
+        return;
+    }
+    
+    console.log("✅ Selector de idioma encontrado");
+    
+    // Cargar idioma guardado o usar español por defecto
+    const savedLang = localStorage.getItem('tech-tree-language') || 'es';
+    console.log("Idioma guardado:", savedLang);
+    
+    langSelector.value = savedLang;
+    
+    // Aplicar idioma inicial
+    changeLanguage(savedLang);
+    
+    // Evento para cambiar idioma
+    langSelector.addEventListener('change', function() {
+        console.log("🔄 Cambiando idioma a:", this.value);
+        changeLanguage(this.value);
+    });
+    
+    console.log("✅ Traducción inicializada correctamente");
+}
+
+// Llamar a initTranslation cuando la página se cargue
+// PERO después de que todo lo demás esté inicializado
+// Fin del traductor
+// Inicializar todos los árboles
 window.addEventListener('load', () => {
     initializeBaseNodes(); // Primero inicializar las posiciones base
     ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
         initTree(treeId);
     });
     resetAll();
+    
+    // Inicializar traducción DESPUÉS de que todo esté cargado
+    setTimeout(() => {
+        initTranslation();
+    }, 100);
 });
 </script>
 </body>
