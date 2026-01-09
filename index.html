@@ -203,6 +203,29 @@ align-items: center;
     z-index: 3;
 }
 
+/* NUEVOS ESTADOS VISUALES */
+.node-efficient {
+    border-color: #00ff00 !important;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.node-overleveled {
+    border-style: dashed !important;
+    opacity: 0.9;
+    border-color: #ffaa00 !important;
+}
+
+.node-critical {
+    animation: pulse-critical 1s infinite;
+    border-color: #ff0000 !important;
+}
+
+@keyframes pulse-critical {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
 /* EFECTO PARA TAP SOSTENIDO */
 .node-downgrading {
     animation: pulse-downgrade 0.5s infinite alternate;
@@ -921,7 +944,7 @@ const translations = {
         " puntos de tecnologia.": " points technologiques.",
         "No cumples requisitos anteriores.": "Tu ne remplis pas les conditions requises.",
         "Límite alcanzado.": "Limite atteinte.",
-        "No puedes subir este nodo porque superaría el límite permitido por sus parents.": "Tu ne peux pas monter ce nœud car il dépasserait la limite autorisée par ses parents.",
+        "No puedes subir este nodo porque superaría el límite permitido por ses parents.": "Tu ne peux pas monter ce nœud car il dépasserait la limite autorisée par ses parents.",
         "Otra rama bloquea esta.": "Une autre branche bloque celle-ci.",
         "No quedan Daños Finales disponibles.": "Plus de Dégâts Finaux disponibles.",
         " subió a nivel ": " augmenté au niveau ",
@@ -1404,7 +1427,11 @@ let downgradeNodeId = null;
 let downgradeTreeId = null; 
 let tapStartTime = 0; 
 const HOLD_DELAY = 800; 
-const DOWNGRADE_INTERVAL = 300; 
+const DOWNGRADE_INTERVAL = 300;
+ // ======================== VARIABLES PARA DOBLE CLICK ===========================
+let lastClickTime = 0;
+let lastClickedNodeId = null;
+let lastClickedTreeId = null;
  
 // Variables para posiciones base (relativas) 
 let BASE_WIDTH = 900; // Tamaño base para desktop 
@@ -1517,8 +1544,248 @@ const techDescriptions = {
 "yellow": { title: "Daño Final", description: "Daño final único", stat: "daño final" } 
 } 
 }; 
- 
-// =============================== FUNCIONES DE UTILIDAD =============================== 
+
+// ======================== NUEVO SISTEMA AUTO-AJUSTABLE ===========================
+
+// 1. CALCULAR NIVELES REQUERIDOS DE PADRES
+function calculateRequiredParentLevelsForChild(childId, desiredChildLevel) {
+    const cfg = getNodeConfig(childId);
+    const requirements = {};
+    
+    if (!cfg) return requirements;
+    
+    if (cfg.type === 'secondary') {
+        // Secundario necesita principal: Math.ceil(desiredChildLevel / 20) * 20
+        const mainId = cfg.branch + '-main';
+        requirements[mainId] = Math.ceil(desiredChildLevel / 20) * 20;
+    }
+    
+    else if (cfg.type === 'tertiary') {
+        // Terciario necesita secundario: Math.ceil(desiredChildLevel / 20) * 20
+        const secId = cfg.parents[0];
+        requirements[secId] = Math.ceil(desiredChildLevel / 20) * 20;
+        
+        // Y ese secundario necesita principal
+        const mainId = cfg.branch + '-main';
+        requirements[mainId] = requirements[secId];
+    }
+    
+    else if (cfg.type === 'mid') {
+        // ¡¡¡CORRECCIÓN IMPORTANTE!!!
+        // Mid necesita terciarios: Math.ceil(desiredChildLevel / 10) * 20
+        // PERO: si desiredChildLevel es 10 → Math.ceil(10/10)=1 → 1*20=20 ✓
+        // Si desiredChildLevel es 1 → Math.ceil(1/10)=1 → 1*20=20 ✓
+        
+        const requiredTerLevel = Math.ceil(desiredChildLevel / 10) * 20;
+        
+        // Ambos terciarios necesitan el mismo nivel
+        const ter1Id = cfg.parents[0];
+        const ter2Id = cfg.parents[1];
+        requirements[ter1Id] = requiredTerLevel;
+        requirements[ter2Id] = requiredTerLevel;
+        
+        // Esos terciarios necesitan su secundario
+        const ter1Cfg = getNodeConfig(ter1Id);
+        const secId = ter1Cfg.parents[0];
+        requirements[secId] = requiredTerLevel;
+        
+        // Y ese secundario necesita principal
+        const mainId = cfg.branch + '-main';
+        requirements[mainId] = requiredTerLevel;
+    }
+    
+    else if (cfg.type === 'final') {
+        // Final necesita ambos mids en 10
+        const midLId = cfg.branch + '-midL';
+        const midRId = cfg.branch + '-midR';
+        requirements[midLId] = 10;
+        requirements[midRId] = 10;
+        
+        // Esos mids necesitan terciarios en 20
+        const terIds = [
+            cfg.branch + '-terA1',
+            cfg.branch + '-terA2', 
+            cfg.branch + '-terB1',
+            cfg.branch + '-terB2'
+        ];
+        
+        terIds.forEach(terId => {
+            requirements[terId] = 20;
+        });
+        
+        // Esos terciarios necesitan secundarios en 20
+        requirements[cfg.branch + '-secL'] = 20;
+        requirements[cfg.branch + '-secR'] = 20;
+        
+        // Y esos secundarios necesitan principal en 20
+        requirements[cfg.branch + '-main'] = 20;
+    }
+    
+    return requirements;
+}
+
+// 2. FUNCIÓN RECURSIVA PARA SUBIR PADRES (EMPUJA HACIA ARRIBA)
+function raiseParentToLevel(treeId, parentId, targetLevel) {
+  const state = treesState[treeId];
+  const currentLevel = state.levels[parentId]?.current || 0;
+  
+  // Si ya está en el nivel o superior, listo
+  if (currentLevel >= targetLevel) return true;
+  
+  const parentCfg = getNodeConfig(parentId);
+  
+  // PRIMERO: Asegurar los padres de ESTE padre (recursión)
+  if (parentCfg.type !== 'main' && parentCfg.type !== 'root') {
+    const requiredGrandparentLevels = calculateRequiredParentLevelsForChild(parentId, targetLevel);
+    
+    for (const [grandparentId, grandparentRequired] of Object.entries(requiredGrandparentLevels)) {
+      if (!raiseParentToLevel(treeId, grandparentId, grandparentRequired)) {
+        return false;
+      }
+    }
+  }
+  
+  // SEGUNDO: Subir este padre hasta el nivel objetivo
+  while (state.levels[parentId].current < targetLevel) {
+    if (!performSingleUpgrade(treeId, parentId)) {
+      return false; // No hay puntos suficientes
+    }
+  }
+  
+  return true;
+}
+
+// 3. UPGRADE CON AUTO-COMPLETADO DE PADRES
+function upgradeNodeWithParentPush(treeId, nodeId) {
+  const state = treesState[treeId];
+  const cfg = getNodeConfig(nodeId);
+  
+  // Si es nodo principal o root, comportamiento normal
+  if (cfg.type === 'root' || cfg.type === 'main') {
+    return originalHandleNodeUpgrade(treeId, getNodeElement(treeId, nodeId));
+  }
+  
+  // PASO 1: Calcular nuevo nivel del hijo
+  const currentChildLevel = state.levels[nodeId]?.current || 0;
+  const newChildLevel = currentChildLevel + 1;
+  
+  // Verificar límite máximo del nodo
+  if (newChildLevel > cfg.max) {
+    setLog("Límite alcanzado.");
+    return false;
+  }
+  
+  // PASO 2: ¿Qué nivel necesitan los padres para esto?
+  const requiredParentLevels = calculateRequiredParentLevelsForChild(nodeId, newChildLevel);
+  
+  // PASO 3: Subir cada padre a su nivel requerido (empuja hacia arriba)
+  let canUpgrade = true;
+  
+  for (const [parentId, requiredLevel] of Object.entries(requiredParentLevels)) {
+    const currentParentLevel = state.levels[parentId]?.current || 0;
+    
+    if (currentParentLevel < requiredLevel) {
+      // Subir este padre (y recursivamente SUS padres)
+      if (!raiseParentToLevel(treeId, parentId, requiredLevel)) {
+        canUpgrade = false;
+        break;
+      }
+    }
+  }
+  
+  // PASO 4: Si todos los padres están listos, subir el hijo
+  if (canUpgrade) {
+    return performSingleUpgrade(treeId, nodeId);
+  }
+  
+  return false;
+}
+
+// 4. ENCONTRAR HIJOS QUE DEPENDEN DE UN NODO
+function findChildNodesThatDependOn(treeId, parentId) {
+  const children = [];
+  const state = treesState[treeId];
+  
+  Object.keys(state.levels).forEach(nodeId => {
+    const cfg = getNodeConfig(nodeId);
+    if (cfg && cfg.parents && cfg.parents.includes(parentId)) {
+      children.push(nodeId);
+    }
+  });
+  
+  return children;
+}
+
+// 5. DOWNGRADE CON AJUSTE DE HIJOS (TIENE HACIA ABAJO)
+function downgradeNodeWithChildPull(treeId, nodeId) {
+  const state = treesState[treeId];
+  const cfg = getNodeConfig(nodeId);
+  
+  // PASO 1: Bajar este nodo 1 nivel
+  if (!performSingleDowngrade(treeId, nodeId)) {
+    return false;
+  }
+  
+  // PASO 2: Verificar si algún HIJO ahora viola las reglas
+  // (Pero NO tocamos a los padres - ellos mantienen su nivel)
+  const childNodes = findChildNodesThatDependOn(treeId, nodeId);
+  
+  for (const childId of childNodes) {
+    const childCfg = getNodeConfig(childId);
+    const childLevel = state.levels[childId]?.current || 0;
+    
+    if (childLevel > 0) {
+      // ¿Cuál es el máximo permitido para este hijo ahora?
+      const newMaxForChild = getAllowedMaxForNode(treeId, childId);
+      
+      // Si el hijo excede el nuevo máximo, bajarlo
+      if (childLevel > newMaxForChild) {
+        const excess = childLevel - newMaxForChild;
+        for (let i = 0; i < excess; i++) {
+          if (!downgradeNodeWithChildPull(treeId, childId)) {
+            break; // Recursivo, pero con protección
+          }
+        }
+      }
+    }
+  }
+  
+  return true;
+}
+
+// 6. CALCULAR NIVEL REQUERIDO POR LOS HIJOS
+function calculateLevelRequiredByChildren(treeId, parentId) {
+  const state = treesState[treeId];
+  const children = findChildNodesThatDependOn(treeId, parentId);
+  let maxRequired = 0;
+  
+  children.forEach(childId => {
+    const childCfg = getNodeConfig(childId);
+    const childLevel = state.levels[childId]?.current || 0;
+    
+    if (childLevel > 0) {
+      if (childCfg.type === 'secondary') {
+        // Secundario necesita principal al mismo nivel (múltiplo de 20)
+        const required = Math.ceil(childLevel / 20) * 20;
+        maxRequired = Math.max(maxRequired, required);
+      }
+      else if (childCfg.type === 'tertiary') {
+        // Terciario necesita secundario al mismo nivel
+        const required = Math.ceil(childLevel / 20) * 20;
+        maxRequired = Math.max(maxRequired, required);
+      }
+      else if (childCfg.type === 'mid') {
+        // Mid necesita terciarios: nivel_mid * 2
+        const required = Math.ceil(childLevel / 10) * 20;
+        maxRequired = Math.max(maxRequired, required);
+      }
+    }
+  });
+  
+  return maxRequired;
+}
+
+// ======================== FUNCIONES DE UTILIDAD =============================== 
 function setLog(msg) {
     // Obtener siempre el idioma ACTUAL del localStorage
     const currentLang = localStorage.getItem('tech-tree-language') || 'es';
@@ -1911,6 +2178,34 @@ function getTertiaryDisplayTitle(treeId, nodeId) {
 
     return "Terc.";
 }
+// ======================== FUNCIÓN PARA CALCULAR SIGUIENTE HITO ===========================
+
+function getNextMilestoneForNode(treeId, nodeId, fromLevel = null) {
+    const state = treesState[treeId];
+    const cfg = getNodeConfig(nodeId);
+    const currentLevel = fromLevel !== null ? fromLevel : (state.levels[nodeId]?.current || 0);
+    
+    if (!cfg) return currentLevel + 1;
+    
+    switch(cfg.type) {
+        case 'mid':
+            // Mids: múltiplos de 10 (10, 20, 30, 40, 50)
+            return Math.min(cfg.max, Math.ceil((currentLevel + 1) / 10) * 10);
+            
+        case 'final':
+            // Final: siempre 1 (máximo)
+            return cfg.max;
+            
+        case 'tertiary':
+        case 'secondary':
+        case 'main':
+            // Otros: múltiplos de 20 (20, 40, 60, 80, 100)
+            return Math.min(cfg.max, Math.ceil((currentLevel + 1) / 20) * 20);
+            
+        default:
+            return currentLevel + 1;
+    }
+}
 
 // --- DEFINICIÓN DE NODOS CON POSICIONES RELATIVAS ---
 // Ahora las posiciones son relativas (porcentajes) para que sean responsivas
@@ -2288,6 +2583,196 @@ function calculateTotalSpentOnNode(nodeId, currentLevel) {
     }
     return total;
 }
+// ======================== SUBIR NODO A NIVEL ESPECÍFICO ===========================
+
+function upgradeNodeToLevel(treeId, nodeId, targetLevel) {
+    const state = treesState[treeId];
+    const cfg = getNodeConfig(nodeId);
+    const currentLevel = state.levels[nodeId]?.current || 0;
+    
+    if (targetLevel <= currentLevel) {
+        return true; // Ya está en ese nivel o superior
+    }
+    
+    if (targetLevel > cfg.max) {
+        setLog(`${cfg.title} no puede pasar de nivel ${cfg.max}.`);
+        return false;
+    }
+    
+    // Para nodos principales, subir nivel por nivel normal
+    if (cfg.type === 'main' || cfg.type === 'root') {
+        let success = true;
+        for (let lvl = currentLevel; lvl < targetLevel; lvl++) {
+            if (!performSingleUpgrade(treeId, nodeId)) {
+                success = false;
+                break;
+            }
+        }
+        return success;
+    }
+    
+    // Calcular requisitos de padres para el NIVEL OBJETIVO
+    const requiredParentLevels = calculateRequiredParentLevelsForChild(nodeId, targetLevel);
+    
+    // Subir cada padre a su nivel requerido
+    for (const [parentId, requiredLevel] of Object.entries(requiredParentLevels)) {
+        const currentParentLevel = state.levels[parentId]?.current || 0;
+        
+        if (currentParentLevel < requiredLevel) {
+            // Subir este padre (y sus padres recursivamente)
+            if (!raiseParentToLevel(treeId, parentId, requiredLevel)) {
+                return false;
+            }
+        }
+    }
+    
+    // Calcular costo total
+    let totalCost = 0;
+    for (let lvl = currentLevel; lvl < targetLevel; lvl++) {
+        totalCost += calculateCurrentCost(nodeId, lvl);
+    }
+    
+    if (techPoints < totalCost) {
+        setLog(`Necesitas ${totalCost} puntos para subir a nivel ${targetLevel}.`);
+        return false;
+    }
+    
+    // Subir este nodo nivel por nivel
+    let levelsUpgraded = 0;
+    for (let lvl = currentLevel; lvl < targetLevel; lvl++) {
+        if (!performSingleUpgrade(treeId, nodeId)) {
+            break;
+        }
+        levelsUpgraded++;
+    }
+    
+    if (levelsUpgraded > 0) {
+        return true;
+    }
+    
+    return false;
+}
+// ======================== SISTEMA DE DOBLE CLICK PARA HITOS EN CADENA ===========================
+
+function handleDoubleClickMilestoneChain(treeId, nodeId) {
+    const state = treesState[treeId];
+    const cfg = getNodeConfig(nodeId);
+    
+    if (!cfg || cfg.type === 'root') return false;
+    
+    const currentLevel = state.levels[nodeId]?.current || 0;
+    
+    // PARA NODOS FINAL: comportamiento especial
+if (cfg.type === 'final') {
+    // Si el Final no está en 1, subirlo primero
+    if (currentLevel < 1) {
+        console.log(`Subiendo Final ${cfg.branch} de ${currentLevel} → 1`);
+        if (!upgradeNodeToLevel(treeId, nodeId, 1)) {
+            return false;
+        }
+    } else {
+        console.log(`Final ${cfg.branch} ya está en nivel 1`);
+    }
+    
+    // Ahora subir TODOS los padres al siguiente hito
+    upgradeAllParentsToNextMilestone(treeId, nodeId);
+    return true;
+}
+    
+    // PARA OTROS NODOS: comportamiento normal
+    const currentNodeTarget = getNextMilestoneForNode(treeId, nodeId);
+    
+    // Si ya está en o sobre el hito, usar el siguiente
+    let finalTarget = currentNodeTarget;
+    if (currentLevel >= currentNodeTarget) {
+        finalTarget = getNextMilestoneForNode(treeId, nodeId, currentLevel + 1);
+    }
+    
+    if (finalTarget <= currentLevel) {
+        setLog(`${cfg.title} ya está en su máximo.`);
+        return false;
+    }
+    
+    console.log(`Doble click: ${nodeId} de ${currentLevel} → ${finalTarget}`);
+    
+    // PASO 1: Subir ESTE nodo al hito
+    if (!upgradeNodeToLevel(treeId, nodeId, finalTarget)) {
+        return false;
+    }
+    
+    // PASO 2: Para Mid y Final, NO subir padres adicionalmente
+// (upgradeNodeToLevel ya los subió al nivel requerido)
+if (cfg.type === 'mid' || cfg.type === 'final') {
+    // No hacer nada extra - los padres ya están en el nivel correcto
+    return true;
+}
+
+// PASO 3: Solo para terciarios y secundarios, subir padres también
+if ((cfg.type === 'tertiary' || cfg.type === 'secondary') && cfg.parents) {
+    cfg.parents.forEach(parentId => {
+        const parentCfg = getNodeConfig(parentId);
+        if (!parentCfg || parentCfg.type === 'root') return;
+        
+        const parentCurrent = state.levels[parentId]?.current || 0;
+        const parentTarget = getNextMilestoneForNode(treeId, parentId, parentCurrent);
+        
+        // Solo subir si no está ya en ese hito
+        if (parentCurrent < parentTarget) {
+            upgradeNodeToLevel(treeId, parentId, parentTarget);
+        }
+    });
+}
+    
+    return true;
+}
+
+// NUEVA FUNCIÓN: Subir todos los padres de un nodo a sus próximos hitos
+// FUNCIÓN SIMPLIFICADA: Solo sube al siguiente hito
+function upgradeAllParentsToNextMilestone(treeId, nodeId) {
+    const state = treesState[treeId];
+    const cfg = getNodeConfig(nodeId);
+    
+    if (!cfg || cfg.type !== 'final') return;
+    
+    const branch = cfg.branch;
+    console.log(`Subiendo padres de Final ${branch} al siguiente hito...`);
+    
+    // Definir TODOS los nodos padres en orden (de hijos a padres)
+    const parentNodes = [
+        `${branch}-midL`,      // 1. Mid izquierdo
+        `${branch}-midR`,      // 2. Mid derecho
+        `${branch}-terA1`,     // 3. Terciario A1
+        `${branch}-terA2`,     // 4. Terciario A2
+        `${branch}-terB1`,     // 5. Terciario B1
+        `${branch}-terB2`,     // 6. Terciario B2
+        `${branch}-secL`,      // 7. Secundario izquierdo
+        `${branch}-secR`,      // 8. Secundario derecho
+        `${branch}-main`       // 9. Principal
+    ];
+    
+    // Para cada nodo padre, subirlo solo a su SIGUIENTE hito
+    parentNodes.forEach(parentId => {
+        const parentCfg = getNodeConfig(parentId);
+        if (!parentCfg) return;
+        
+        const currentLevel = state.levels[parentId]?.current || 0;
+        const nextMilestone = getNextMilestoneForNode(treeId, parentId, currentLevel);
+        
+        // Solo subir si no está ya en ese hito y no supera máximo
+        if (currentLevel < nextMilestone && nextMilestone <= parentCfg.max) {
+            console.log(`  ${parentId}: ${currentLevel} → ${nextMilestone}`);
+            
+            // Subir nivel por nivel (no usar upgradeNodeToLevel que calcula requisitos)
+            for (let lvl = currentLevel; lvl < nextMilestone; lvl++) {
+                if (!performSingleUpgrade(treeId, parentId)) {
+                    break; // Si falla, parar
+                }
+            }
+        }
+    });
+    
+    setLog(`Padres de ${branch} subieron al siguiente hito.`);
+}
 
 // --- SISTEMA DE DESBLOQUEO ===========================================================
 function getAllowedMaxForNode(treeId, nodeId) {
@@ -2418,6 +2903,47 @@ function checkChildExceedsParent(treeId, childId) {
 
     return false;
 }
+// ======================== MANEJADOR PRINCIPAL DE CLICKS ===========================
+
+function handleNodeClick(treeId, nodeElem, e) {
+    const nodeId = nodeElem.dataset.id;
+    const cfg = getNodeConfig(nodeId);
+    const currentTime = Date.now();
+    
+    // Detectar doble click (mismo nodo en < 400ms)
+    const isDoubleClick = (currentTime - lastClickTime < 400) && 
+                         (lastClickedNodeId === nodeId) && 
+                         (lastClickedTreeId === treeId);
+    
+    // Actualizar registros
+    lastClickTime = currentTime;
+    lastClickedNodeId = nodeId;
+    lastClickedTreeId = treeId;
+    
+    // DOBLE CLICK: Subir nodo + padres a hitos
+    if (isDoubleClick && cfg.type !== 'root') {
+        e.preventDefault();
+        return handleDoubleClickMilestoneChain(treeId, nodeId);
+    } 
+    // CLICK SIMPLE: Comportamiento normal
+    else {
+        return handleNodeUpgradeNormal(treeId, nodeElem);
+    }
+}
+
+// Función de upgrade normal (1 nivel con auto-padres)
+function handleNodeUpgradeNormal(treeId, nodeElem) {
+    const nodeId = nodeElem.dataset.id;
+    const cfg = getNodeConfig(nodeId);
+    
+    // Para nodos principales y root, comportamiento original
+    if (cfg.type === 'root' || cfg.type === 'main') {
+        return originalHandleNodeUpgrade(treeId, nodeElem);
+    }
+    
+    // Para otros nodos: sistema auto-ajustable
+    return upgradeNodeWithParentPush(treeId, nodeId);
+}
 
 // ================================================================ SISTEMA DE TAP SOSTENIDO ================================================================
 function startDowngradeTimer(treeId, nodeId, nodeElem) {
@@ -2429,7 +2955,8 @@ function startDowngradeTimer(treeId, nodeId, nodeElem) {
 
     activeDowngradeInterval = setTimeout(() => {
         activeDowngradeInterval = setInterval(() => {
-            performSingleDowngrade(treeId, nodeId);
+            // Usar el NUEVO downgrade con ajuste de hijos
+            performSingleDowngradeWithChildPull(treeId, nodeId);
         }, DOWNGRADE_INTERVAL);
     }, HOLD_DELAY);
 }
@@ -2449,7 +2976,8 @@ function stopDowngradeTimer(nodeElem) {
     downgradeNodeId = null;
 }
 
-function performSingleDowngrade(treeId, nodeId) {
+// NUEVA: Downgrade que tira hijos hacia abajo
+function performSingleDowngradeWithChildPull(treeId, nodeId) {
     const state = treesState[treeId];
     const cfg = getNodeConfig(nodeId);
     const lvl = state.levels[nodeId];
@@ -2459,163 +2987,229 @@ function performSingleDowngrade(treeId, nodeId) {
         return;
     }
 
-    let canDowngrade = true;
-
-    if (cfg.type === "main") {
-        const secL = state.levels[cfg.branch + "-secL"];
-        const secR = state.levels[cfg.branch + "-secR"];
-        const newMainLevel = lvl.current - 1;
-        const newMaxForSec = Math.floor(newMainLevel / 20) * 20;
-
-        if ((secL && secL.current > newMaxForSec) ||
-            (secR && secR.current > newMaxForSec)) {
-            canDowngrade = false;
-            setLog("No puedes bajar el principal mientras los secundarios excedan el nuevo límite.");
-        }
-    } else if (cfg.type === "secondary") {
-        const isLeft = cfg.id.includes("secL");
-        const ter1 = state.levels[cfg.branch + (isLeft ? "-terA1" : "-terB1")];
-        const ter2 = state.levels[cfg.branch + (isLeft ? "-terA2" : "-terB2")];
-        const newSecLevel = lvl.current - 1;
-        const newMaxForTer = Math.floor(newSecLevel / 20) * 20;
-
-        if ((ter1 && ter1.current > newMaxForTer) ||
-            (ter2 && ter2.current > newMaxForTer)) {
-            canDowngrade = false;
-            setLog("No puedes bajar el secundario mientras los terciarios excedan el nuevo límite.");
-        }
-    } else if (cfg.type === "tertiary") {
-        const isLeft = cfg.id.includes("terA");
-        const mid = state.levels[cfg.branch + (isLeft ? "-midL" : "-midR")];
-        if (mid && mid.current > 0) {
-            canDowngrade = false;
-            setLog("No puedes bajar el terciario mientras el nodo medio tenga niveles.");
-        }
-    } else if (cfg.type === "mid") {
-        const final = state.levels[cfg.branch + "-final"];
-        if (final && final.current > 0) {
-            canDowngrade = false;
-            setLog("No puedes bajar el nodo medio mientras el final esté activo.");
-        }
-    }
-
-    if (!canDowngrade) {
-        stopDowngradeTimer(getNodeElement(treeId, nodeId));
-        return;
-    }
-
-    const refundAmount = calculateCurrentCost(nodeId, lvl.current - 1);
-    techPoints += refundAmount;
-    totalPointsSpent = Math.max(0, totalPointsSpent - refundAmount);
-
-    if (cfg.type === "final" && lvl.current >= 1) {
-        globalFinalPointsLeft += 1;
-        state.lockedBranch = cfg.branch;
-    }
-
-    lvl.current -= 1;
-
-    // SOLO el nodo principal (main) puede desbloquear una rama cuando baja a 0
-if (cfg.branch && cfg.type === "main" && state.lockedBranch === cfg.branch) {
-    if (lvl.current <= 0) {
-        state.lockedBranch = null;
-    }
-}
-
-    updateNodeDisplay(treeId, nodeId);
-    updateGlobalUI();
-
-    setLog(`Bajaste 1 nivel en ${cfg.title}. +${refundAmount} pts.`);
-
-    refreshAllowedDisplays(treeId);
-
-    if (lvl.current <= 0) {
+    // Usar el NUEVO sistema de downgrade
+    if (!downgradeNodeWithChildPull(treeId, nodeId)) {
         stopDowngradeTimer(getNodeElement(treeId, nodeId));
     }
 }
 
-// =========================== FUNCIONES DE INTERACCIÓN CON NODOS ===========================
-function handleNodeUpgrade(treeId, nodeElem) {
+// ORIGINAL: Función de upgrade simple (para padres)
+function performSingleUpgrade(treeId, nodeId) {
     const state = treesState[treeId];
-    const nodeId = nodeElem.dataset.id;
     const cfg = getNodeConfig(nodeId);
     const lvl = state.levels[nodeId];
-
-    if (nodeElem.classList.contains("node-locked")) {
-        setLog("Nodo bloqueado por prerrequisitos o rama.");
-        return;
-    }
-
+    
+    if (!cfg || !lvl) return false;
+    
     const currentCost = calculateCurrentCost(nodeId, lvl.current);
+    
+    // Verificar puntos
     if (techPoints < currentCost) {
         setLog(`Necesitas ${currentCost} puntos de tecnologia.`);
-        return;
+        return false;
     }
-
-    const allowedMax = getAllowedMaxForNode(treeId, nodeId);
-    if (allowedMax <= 0) {
-        setLog("No cumples requisitos anteriores.");
-        return;
+    
+    // Verificar si es final y hay puntos disponibles
+    if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
+        setLog("No quedan Daños Finales disponibles.");
+        return false;
     }
-
-    if (lvl.current >= allowedMax || lvl.current >= cfg.max) {
-        setLog("Límite alcanzado.");
-        return;
-    }
-
-    if (checkChildExceedsParent(treeId, nodeId)) {
-        setLog("No puedes subir este nodo porque superaría el límite permitido por sus padres.");
-        return;
-    }
-
+    
+    // Verificar rama bloqueada
     if (cfg.branch && cfg.type !== "final") {
         const lockedBranch = state.lockedBranch;
         const finalNodeId = cfg.branch + "-final";
         const finalNode = state.levels[finalNodeId];
         const hasCompletedFinal = finalNode && finalNode.current > 0;
-
+        
         if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
             setLog("Otra rama bloquea esta.");
-            return;
+            return false;
         }
     }
-
-    if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
-        setLog("No quedan Daños Finales disponibles.");
-        return;
-    }
-
+    
+    // Aplicar upgrade
     techPoints -= currentCost;
     totalPointsSpent += currentCost;
-
-    if (cfg.type === "final") globalFinalPointsLeft -= 1;
-    lvl.current += 1;
-
-    // SOLO el nodo principal (main) puede bloquear una rama cuando sube de nivel
-if (cfg.branch && cfg.type === "main" && !state.lockedBranch) {
-    const finalNodeId = cfg.branch + "-final";
-    const finalNode = state.levels[finalNodeId];
-    const hasCompletedFinal = finalNode && finalNode.current > 0;
-
-    if (!hasCompletedFinal) {
-        state.lockedBranch = cfg.branch;
+    
+    if (cfg.type === "final") {
+        globalFinalPointsLeft -= 1;
     }
-}
+    
+    lvl.current += 1;
+    
+    // SOLO el nodo principal (main) puede bloquear una rama cuando sube de nivel
+    if (cfg.branch && cfg.type === "main" && !state.lockedBranch) {
+        const finalNodeId = cfg.branch + "-final";
+        const finalNode = state.levels[finalNodeId];
+        const hasCompletedFinal = finalNode && finalNode.current > 0;
+        
+        if (!hasCompletedFinal) {
+            state.lockedBranch = cfg.branch;
+        }
+    }
+    
+    // Actualizar visual
     updateNodeDisplay(treeId, nodeId);
+    updateNodeVisualState(treeId, nodeId); // NUEVO: actualizar estado visual
     updateGlobalUI();
-
+    
+    // Log
     const benefit = getStatinfoForNode(treeId, nodeId, 1);
     if (benefit) {
         setLog(`${cfg.title} subió a nivel ${lvl.current}. +${benefit.value}%`);
     } else {
         setLog(`${cfg.title} subió a nivel ${lvl.current}.`);
     }
-
+    
+    // Si es final y se completó, desbloquear rama
     if (cfg.type === "final" && lvl.current >= 1) {
         state.lockedBranch = null;
     }
-
+    
     refreshAllowedDisplays(treeId);
+    return true;
+}
+
+// ORIGINAL: Función de downgrade simple (para padres)
+function performSingleDowngrade(treeId, nodeId) {
+    const state = treesState[treeId];
+    const cfg = getNodeConfig(nodeId);
+    const lvl = state.levels[nodeId];
+    
+    if (!lvl || lvl.current <= 0) return false;
+    
+    const refundAmount = calculateCurrentCost(nodeId, lvl.current - 1);
+    
+    // Aplicar refund
+    techPoints += refundAmount;
+    totalPointsSpent = Math.max(0, totalPointsSpent - refundAmount);
+    
+    // Si es final, devolver punto global
+    if (cfg.type === "final" && lvl.current >= 1) {
+        globalFinalPointsLeft += 1;
+    }
+    
+    lvl.current -= 1;
+    
+    // SOLO el nodo principal (main) puede desbloquear una rama cuando baja a 0
+    if (cfg.branch && cfg.type === "main" && state.lockedBranch === cfg.branch) {
+        if (lvl.current <= 0) {
+            state.lockedBranch = null;
+        }
+    }
+    
+    // Actualizar visual
+    updateNodeDisplay(treeId, nodeId);
+    updateNodeVisualState(treeId, nodeId); // NUEVO: actualizar estado visual
+    updateGlobalUI();
+    
+    // Log
+    setLog(`Bajaste 1 nivel en ${cfg.title}. +${refundAmount} pts.`);
+    
+    refreshAllowedDisplays(treeId);
+    return true;
+}
+
+// NUEVA: Original handleNodeUpgrade (se mantiene para main y root)
+function originalHandleNodeUpgrade(treeId, nodeElem) {
+    const state = treesState[treeId];
+    const nodeId = nodeElem.dataset.id;
+    const cfg = getNodeConfig(nodeId);
+    const lvl = state.levels[nodeId];
+    
+    if (nodeElem.classList.contains("node-locked")) {
+        setLog("Nodo bloqueado por prerrequisitos o rama.");
+        return false;
+    }
+    
+    const currentCost = calculateCurrentCost(nodeId, lvl.current);
+    if (techPoints < currentCost) {
+        setLog(`Necesitas ${currentCost} puntos de tecnologia.`);
+        return false;
+    }
+    
+    const allowedMax = getAllowedMaxForNode(treeId, nodeId);
+    if (allowedMax <= 0) {
+        setLog("No cumples requisitos anteriores.");
+        return false;
+    }
+    
+    if (lvl.current >= allowedMax || lvl.current >= cfg.max) {
+        setLog("Límite alcanzado.");
+        return false;
+    }
+    
+    if (checkChildExceedsParent(treeId, nodeId)) {
+        setLog("No puedes subir este nodo porque superaría el límite permitido por sus padres.");
+        return false;
+    }
+    
+    if (cfg.branch && cfg.type !== "final") {
+        const lockedBranch = state.lockedBranch;
+        const finalNodeId = cfg.branch + "-final";
+        const finalNode = state.levels[finalNodeId];
+        const hasCompletedFinal = finalNode && finalNode.current > 0;
+        
+        if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
+            setLog("Otra rama bloquea esta.");
+            return false;
+        }
+    }
+    
+    if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
+        setLog("No quedan Daños Finales disponibles.");
+        return false;
+    }
+    
+    return performSingleUpgrade(treeId, nodeId);
+}
+
+// =========================== NUEVA FUNCIÓN DE INTERACCIÓN CON NODOS ===========================
+function handleNodeUpgrade(treeId, nodeElem) {
+    const nodeId = nodeElem.dataset.id;
+    const cfg = getNodeConfig(nodeId);
+    
+    // Para nodos principales (root, main) mantener comportamiento original
+    if (cfg.type === 'root' || cfg.type === 'main') {
+        return originalHandleNodeUpgrade(treeId, nodeElem);
+    }
+    
+    // Para TODOS los demás nodos: usar sistema auto-ajustable
+    return upgradeNodeWithParentPush(treeId, nodeId);
+}
+
+// NUEVA: Actualizar estado visual de nodos
+function updateNodeVisualState(treeId, nodeId) {
+    const elem = getNodeElement(treeId, nodeId);
+    if (!elem) return;
+    
+    const state = treesState[treeId];
+    const cfg = getNodeConfig(nodeId);
+    const currentLevel = state.levels[nodeId]?.current || 0;
+    
+    // Quitar todas las clases de estado previas
+    elem.classList.remove('node-efficient', 'node-overleveled', 'node-critical');
+    
+    if (cfg.type === 'root') return;
+    
+    // Calcular nivel mínimo requerido por los hijos
+    const requiredByChildren = calculateLevelRequiredByChildren(treeId, nodeId);
+    
+    if (cfg.type === 'main') {
+        // Para nodos principales: verde si está al nivel justo
+        if (currentLevel === requiredByChildren && currentLevel > 0) {
+            elem.classList.add('node-efficient'); // Justo lo necesario
+        } else if (currentLevel > requiredByChildren && requiredByChildren > 0) {
+            elem.classList.add('node-overleveled'); // Más de lo necesario
+        }
+    } else {
+        // Para otros nodos: rojo si hijos necesitan más
+        const allowedMax = getAllowedMaxForNode(treeId, nodeId);
+        if (currentLevel < allowedMax && currentLevel < requiredByChildren) {
+            elem.classList.add('node-critical'); // ¡Hijos necesitan más!
+        }
+    }
 }
 
 function refreshAllowedDisplays(treeId) {
@@ -2635,19 +3229,21 @@ function refreshAllowedDisplays(treeId) {
         const currentLvl = state.levels[id].current;
 
         if (cfg.branch && state.lockedBranch && cfg.branch !== state.lockedBranch && cfg.type !== "final") {
-    // Si hay una rama bloqueada Y esta no es la rama bloqueada
-    const finalNodeId = cfg.branch + "-final";
-    const finalNode = state.levels[finalNodeId];
-    const hasCompletedFinal = finalNode && finalNode.current > 0;
+            // Si hay una rama bloqueada Y esta no es la rama bloqueada
+            const finalNodeId = cfg.branch + "-final";
+            const finalNode = state.levels[finalNodeId];
+            const hasCompletedFinal = finalNode && finalNode.current > 0;
 
-    if (!hasCompletedFinal) {
-        elem.classList.add("node-locked");
-        return;
-    }
-}
+            if (!hasCompletedFinal) {
+                elem.classList.add("node-locked");
+                updateNodeVisualState(treeId, id); // Actualizar estado visual
+                return;
+            }
+        }
 
         if (checkChildExceedsParent(treeId, id)) {
             elem.classList.add("node-locked");
+            updateNodeVisualState(treeId, id); // Actualizar estado visual
             return;
         }
 
@@ -2658,6 +3254,9 @@ function refreshAllowedDisplays(treeId) {
         } else {
             elem.classList.add("node-locked");
         }
+        
+        // Actualizar estado visual
+        updateNodeVisualState(treeId, id);
     });
 }
 
@@ -2782,33 +3381,43 @@ function initTree(treeId) {
         });
 
         // Eventos para detener
-        nodeElem.addEventListener("mouseup", (e) => {
-            e.preventDefault();
-            const holdTime = Date.now() - tapStartTime;
-            if (holdTime < HOLD_DELAY) {
-                handleNodeUpgrade(treeId, nodeElem);
-            }
-            stopDowngradeTimer(nodeElem);
-        });
+nodeElem.addEventListener("mouseup", (e) => {
+    e.preventDefault();
+    const holdTime = Date.now() - tapStartTime;
+    
+    if (holdTime < HOLD_DELAY) {
+        // Usar el NUEVO sistema de clicks diferenciados
+        handleNodeClick(treeId, nodeElem, e);
+    }
+    
+    stopDowngradeTimer(nodeElem);
+});
 
-        nodeElem.addEventListener("mouseleave", (e) => {
-            stopDowngradeTimer(nodeElem);
-        });
+nodeElem.addEventListener("mouseleave", (e) => {
+    stopDowngradeTimer(nodeElem);
+});
 
-        nodeElem.addEventListener("touchend", (e) => {
-            e.preventDefault();
-            const holdTime = Date.now() - tapStartTime;
-            if (holdTime < HOLD_DELAY) {
-                handleNodeUpgrade(treeId, nodeElem);
-            }
-            stopDowngradeTimer(nodeElem);
-        });
+nodeElem.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    const holdTime = Date.now() - tapStartTime;
+    
+    if (holdTime < HOLD_DELAY) {
+        // Para touch: simular evento de mouse
+        const simulatedEvent = { 
+            ctrlKey: false, 
+            metaKey: false,
+            preventDefault: () => {} 
+        };
+        handleNodeClick(treeId, nodeElem, simulatedEvent);
+    }
+    
+    stopDowngradeTimer(nodeElem);
+});
 
-        nodeElem.addEventListener("touchcancel", (e) => {
-            stopDowngradeTimer(nodeElem);
-        });
-    });
-
+nodeElem.addEventListener("touchcancel", (e) => {
+    stopDowngradeTimer(nodeElem);
+});
+});
     // Crear lineas
     links.forEach(link => {
         const fromCfg = getNodeConfig(link.from);
@@ -2987,8 +3596,6 @@ document.addEventListener("touchend", (e) => {
     }
 });
 
-// Inicializar todos los árboles
-// Traductor
 // ======================== INICIALIZACIÓN DE TRADUCCIÓN ===========================
 function initTranslation() {
     console.log("Inicializando traducción...");
@@ -3020,9 +3627,6 @@ function initTranslation() {
     console.log("✅ Traducción inicializada correctamente");
 }
 
-// Llamar a initTranslation cuando la página se cargue
-// PERO después de que todo lo demás esté inicializado
-// Fin del traductor
 // Inicializar todos los árboles
 window.addEventListener('load', () => {
     initializeBaseNodes(); // Primero inicializar las posiciones base
