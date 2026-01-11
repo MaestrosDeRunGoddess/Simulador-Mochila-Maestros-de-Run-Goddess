@@ -629,6 +629,18 @@ button:hover {
     padding: 3px 6px;
     }
 }
+/* Estilos para el sistema de builds */
+.build-item:hover {
+    background: rgba(40, 45, 75, 0.9) !important;
+    transform: translateX(2px);
+    transition: all 0.2s;
+}
+
+#build-name:focus {
+    outline: none;
+    border-color: #1e90ff !important;
+    box-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
+}
 </style>
 </head>
 
@@ -721,9 +733,29 @@ button:hover {
     </div>
     
     <div class="buttons-container">
-        <button id="reset-current">Reiniciar pestaña</button>
-        <button id="reset-all">Reiniciar todo</button>
+    <button id="reset-current">Reiniciar pestaña</button>
+    <button id="reset-all">Reiniciar todo</button>
+    
+    <!-- NUEVOS BOTONES PARA GUARDAR/CARGAR MEJORADOS -->
+<div style="margin-top: 10px; border-top: 1px solid #444; padding-top: 10px; text-align: center;">
+    <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 10px;">
+        <input type="text" id="build-name" placeholder="Nombre de build" 
+               style="padding: 6px; border-radius: 4px; border: 1px solid #444; background: #1a1f2e; color: white; width: 160px;">
+        <button id="save-build" style="background: #00ce9d; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer;">💾 Guardar</button>
     </div>
+    
+    <button id="load-builds-toggle" style="background: #9d4edd; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; width: 200px; margin-bottom: 5px;">
+        📂 Cargar Build Guardada ▼
+    </button>
+    
+    <div id="saved-builds-list" style="background: rgba(20, 25, 45, 0.95); border: 1px solid #444; border-radius: 4px; margin-top: 5px; max-height: 250px; overflow-y: auto; display: none; text-align: left; position: relative; z-index: 1000;">
+        <!-- Se llenará dinámicamente -->
+    </div>
+    
+    <button id="delete-all-builds" style="background: transparent; border: 1px solid #ff4757; color: #ff4757; padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 10px; display: none;">
+        🗑️ Borrar Todas las Builds
+    </button>
+</div>
     
     <div id="log"></div>
     </div>
@@ -3629,17 +3661,344 @@ function initTranslation() {
 
 // Inicializar todos los árboles
 window.addEventListener('load', () => {
-    initializeBaseNodes(); // Primero inicializar las posiciones base
+    initializeBaseNodes();
     ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
         initTree(treeId);
     });
     resetAll();
     
-    // Inicializar traducción DESPUÉS de que todo esté cargado
     setTimeout(() => {
         initTranslation();
+        
+        // AÑADIR AQUÍ la inicialización del sistema de builds
+        initBuildSystem();
     }, 100);
 });
+// ======================== SISTEMA DE GUARDAR/CARGAR BUILDS ===========================
+
+// Inicializar el sistema de builds
+function initBuildSystem() {
+    const saveBtn = document.getElementById('save-build');
+    const loadToggleBtn = document.getElementById('load-builds-toggle');
+    const buildNameInput = document.getElementById('build-name');
+    const buildsList = document.getElementById('saved-builds-list');
+    const deleteAllBtn = document.getElementById('delete-all-builds');
+    
+    if (!saveBtn || !loadToggleBtn) {
+        console.log('Botones de build system no encontrados');
+        return;
+    }
+    
+    let isBuildsListVisible = false;
+    
+    // Actualizar lista de builds
+    function updateBuildsList() {
+        buildsList.innerHTML = '';
+        const builds = getSavedBuilds();
+        
+        if (builds.length === 0) {
+            buildsList.innerHTML = `
+                <div style="color: #888; text-align: center; padding: 15px;">
+                    No hay builds guardadas<br>
+                    <small>Guarda una build primero</small>
+                </div>
+            `;
+            buildsList.style.display = 'block';
+            
+            // Ocultar botón "Borrar todas" si no hay builds
+            if (deleteAllBtn) {
+                deleteAllBtn.style.display = 'none';
+            }
+            return;
+        }
+        
+        // Mostrar botón "Borrar todas" si hay builds
+        if (deleteAllBtn) {
+            deleteAllBtn.style.display = 'block';
+        }
+        
+        builds.forEach((build, index) => {
+            const buildItem = document.createElement('div');
+            buildItem.className = 'build-item';
+            buildItem.style.padding = '10px';
+            buildItem.style.margin = '0';
+            buildItem.style.background = index % 2 === 0 ? 'rgba(30, 35, 55, 0.7)' : 'rgba(25, 30, 50, 0.7)';
+            buildItem.style.borderBottom = '1px solid #333';
+            buildItem.style.cursor = 'pointer';
+            buildItem.style.display = 'flex';
+            buildItem.style.justifyContent = 'space-between';
+            buildItem.style.alignItems = 'center';
+            buildItem.style.transition = 'background 0.2s';
+            
+            buildItem.innerHTML = `
+                <div style="flex: 1;">
+                    <div style="color: #1e90ff; font-weight: bold; font-size: 13px;">${build.name}</div>
+                    <div style="font-size: 10px; color: #aaa; margin-top: 3px;">
+                        <span>${build.timestamp}</span>
+                        <span style="margin-left: 10px; color: #00ce9d;">${build.totalPoints.toLocaleString()} pts</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="load-build-btn" data-name="${build.name}" 
+                            style="background: #9d4edd; border: none; color: white; padding: 5px 10px; 
+                                   border-radius: 3px; font-size: 11px; cursor: pointer;">
+                        Cargar
+                    </button>
+                    <button class="delete-build-btn" data-name="${build.name}" 
+                            style="background: transparent; border: 1px solid #ff4757; color: #ff4757; 
+                                   padding: 5px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;">
+                        ×
+                    </button>
+                </div>
+            `;
+            
+            // Efecto hover
+            buildItem.addEventListener('mouseenter', () => {
+                buildItem.style.background = 'rgba(40, 45, 75, 0.9)';
+            });
+            buildItem.addEventListener('mouseleave', () => {
+                buildItem.style.background = index % 2 === 0 ? 'rgba(30, 35, 55, 0.7)' : 'rgba(25, 30, 50, 0.7)';
+            });
+            
+            buildsList.appendChild(buildItem);
+        });
+        
+        // Añadir footer con contador
+        const footer = document.createElement('div');
+        footer.style.padding = '8px';
+        footer.style.textAlign = 'center';
+        footer.style.fontSize = '10px';
+        footer.style.color = '#888';
+        footer.style.borderTop = '1px solid #333';
+        footer.textContent = `${builds.length} build${builds.length !== 1 ? 's' : ''} guardada${builds.length !== 1 ? 's' : ''}`;
+        buildsList.appendChild(footer);
+    }
+    
+    // Botón GUARDAR
+    saveBtn.addEventListener('click', () => {
+        const buildName = buildNameInput.value.trim();
+        if (!buildName) {
+            setLog('Escribe un nombre para la build.');
+            buildNameInput.focus();
+            return;
+        }
+        
+        if (saveBuild(buildName)) {
+            setLog(`Build "${buildName}" guardada.`);
+            buildNameInput.value = '';
+            
+            // Si la lista está visible, actualizarla
+            if (isBuildsListVisible) {
+                updateBuildsList();
+            }
+        }
+    });
+    
+    // También permitir guardar con Enter
+    buildNameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            saveBtn.click();
+        }
+    });
+    
+    // Toggle del dropdown (mostrar/ocultar lista)
+    loadToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        isBuildsListVisible = !isBuildsListVisible;
+        buildsList.style.display = isBuildsListVisible ? 'block' : 'none';
+        loadToggleBtn.innerHTML = isBuildsListVisible ? 
+            '📂 Cargar Build Guardada ▲' : '📂 Cargar Build Guardada ▼';
+        
+        if (isBuildsListVisible) {
+            updateBuildsList();
+        }
+    });
+    
+    // Cerrar dropdown al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        if (!loadToggleBtn.contains(e.target) && !buildsList.contains(e.target)) {
+            buildsList.style.display = 'none';
+            isBuildsListVisible = false;
+            loadToggleBtn.innerHTML = '📂 Cargar Build Guardada ▼';
+        }
+    });
+    
+    // Delegación de eventos para los botones de la lista
+    buildsList.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        // Botón CARGAR
+        if (e.target.classList.contains('load-build-btn')) {
+            const buildName = e.target.dataset.name;
+            if (loadBuild(buildName)) {
+                setLog(`Build "${buildName}" cargada.`);
+                buildsList.style.display = 'none';
+                isBuildsListVisible = false;
+                loadToggleBtn.innerHTML = '📂 Cargar Build Guardada ▼';
+            }
+        }
+        
+        // Botón ELIMINAR (×)
+        if (e.target.classList.contains('delete-build-btn')) {
+            const buildName = e.target.dataset.name;
+            if (confirm(`¿Eliminar la build "${buildName}"?`)) {
+                deleteBuild(buildName);
+                setLog(`Build "${buildName}" eliminada.`);
+                updateBuildsList();
+            }
+        }
+    });
+    
+    // Botón BORRAR TODAS (si existe)
+    if (deleteAllBtn) {
+        deleteAllBtn.addEventListener('click', () => {
+            const builds = getSavedBuilds();
+            if (builds.length === 0) {
+                setLog('No hay builds para borrar.');
+                return;
+            }
+            
+            if (confirm(`¿Borrar TODAS las builds (${builds.length})?\nEsta acción no se puede deshacer.`)) {
+                // Borrar todas las builds del localStorage
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('tech_tree_build_')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                
+                setLog(`Todas las builds (${builds.length}) borradas.`);
+                updateBuildsList();
+            }
+        });
+    }
+    
+    console.log('Sistema de builds inicializado correctamente');
+}
+
+// Obtener todas las builds guardadas
+function getSavedBuilds() {
+    const builds = [];
+    
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('tech_tree_build_')) {
+            try {
+                const data = JSON.parse(localStorage.getItem(key));
+                builds.push({
+                    name: key.replace('tech_tree_build_', ''),
+                    timestamp: data.timestamp || 'Sin fecha',
+                    totalPoints: data.totalPointsSpent || 0
+                });
+            } catch (e) {
+                console.error('Error cargando build:', key, e);
+            }
+        }
+    }
+    
+    // Ordenar por timestamp (más reciente primero)
+    builds.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    
+    return builds;
+}
+
+// Guardar la build actual
+function saveBuild(buildName) {
+    try {
+        // Función para convertir Set a Array para serialización
+        function prepareStateForSave(state) {
+            const serializableState = {
+                levels: state.levels || {},
+                lockedBranch: state.lockedBranch || null,
+                unlockedNodes: state.unlockedNodes ? Array.from(state.unlockedNodes) : []
+            };
+            return serializableState;
+        }
+        
+        const buildData = {
+            // Estado de todos los árboles (serializable)
+            guardian: prepareStateForSave(treesState.guardian),
+            vanguardia: prepareStateForSave(treesState.vanguardia),
+            canon: prepareStateForSave(treesState.canon),
+            
+            // Recursos globales
+            techPoints: techPoints,
+            globalFinalPointsLeft: globalFinalPointsLeft,
+            totalPointsSpent: totalPointsSpent,
+            
+            // Metadata
+            timestamp: new Date().toLocaleString(),
+            version: '1.0'
+        };
+        
+        localStorage.setItem(`tech_tree_build_${buildName}`, JSON.stringify(buildData));
+        return true;
+    } catch (e) {
+        console.error('Error guardando build:', e);
+        setLog('Error al guardar la build.');
+        return false;
+    }
+}
+
+// Cargar una build
+function loadBuild(buildName) {
+    try {
+        const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
+        if (!savedData) {
+            setLog(`Build "${buildName}" no encontrada.`);
+            return false;
+        }
+        
+        const buildData = JSON.parse(savedData);
+        
+        // CORRECCIÓN: Convertir unlockedNodes de Array a Set
+        function fixUnlockedNodes(state) {
+            if (state.unlockedNodes && Array.isArray(state.unlockedNodes)) {
+                state.unlockedNodes = new Set(state.unlockedNodes);
+            } else if (!state.unlockedNodes) {
+                state.unlockedNodes = new Set();
+            }
+            return state;
+        }
+        
+        // Restaurar estado de los árboles (CON CORRECCIÓN)
+        treesState.guardian = fixUnlockedNodes(buildData.guardian || { levels: {}, lockedBranch: null, unlockedNodes: new Set() });
+        treesState.vanguardia = fixUnlockedNodes(buildData.vanguardia || { levels: {}, lockedBranch: null, unlockedNodes: new Set() });
+        treesState.canon = fixUnlockedNodes(buildData.canon || { levels: {}, lockedBranch: null, unlockedNodes: new Set() });
+        
+        // Asegurar que levels exista
+        treesState.guardian.levels = treesState.guardian.levels || {};
+        treesState.vanguardia.levels = treesState.vanguardia.levels || {};
+        treesState.canon.levels = treesState.canon.levels || {};
+        
+        // Restaurar recursos
+        techPoints = buildData.techPoints !== undefined ? buildData.techPoints : 9999999;
+        globalFinalPointsLeft = buildData.globalFinalPointsLeft !== undefined ? buildData.globalFinalPointsLeft : 3;
+        totalPointsSpent = buildData.totalPointsSpent || 0;
+        
+        // Actualizar UI
+        updateGlobalUI();
+        
+        // Re-inicializar todos los árboles
+        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+            initTree(treeId);
+        });
+        
+        setLog(`Build "${buildName}" cargada correctamente.`);
+        return true;
+        
+    } catch (e) {
+        console.error('Error cargando build:', e);
+        setLog('Error al cargar la build. Puede ser incompatible.');
+        return false;
+    }
+}
+
+// Eliminar una build
+function deleteBuild(buildName) {
+    localStorage.removeItem(`tech_tree_build_${buildName}`);
+}
+
 </script>
 </body>
 </html>
