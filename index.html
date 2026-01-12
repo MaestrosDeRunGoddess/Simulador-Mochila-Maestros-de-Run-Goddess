@@ -2053,36 +2053,38 @@ function downgradeNodeWithChildPull(treeId, nodeId) {
   return true;
 }
 
-// 6. CALCULAR NIVEL REQUERIDO POR LOS HIJOS
+// Calcular nivel requerido por los hijos de un nodo
 function calculateLevelRequiredByChildren(treeId, parentId) {
-  const state = treesState[treeId];
-  const children = findChildNodesThatDependOn(treeId, parentId);
-  let maxRequired = 0;
-  
-  children.forEach(childId => {
-    const childCfg = getNodeConfig(childId);
-    const childLevel = state.levels[childId]?.current || 0;
+    const state = treesState[treeId];
+    let maxRequired = 0;
     
-    if (childLevel > 0) {
-      if (childCfg.type === 'secondary') {
-        // Secundario necesita principal al mismo nivel (múltiplo de 20)
-        const required = Math.ceil(childLevel / 20) * 20;
-        maxRequired = Math.max(maxRequired, required);
-      }
-      else if (childCfg.type === 'tertiary') {
-        // Terciario necesita secundario al mismo nivel
-        const required = Math.ceil(childLevel / 20) * 20;
-        maxRequired = Math.max(maxRequired, required);
-      }
-      else if (childCfg.type === 'mid') {
-        // Mid necesita terciarios: nivel_mid * 2
-        const required = Math.ceil(childLevel / 10) * 20;
-        maxRequired = Math.max(maxRequired, required);
-      }
-    }
-  });
-  
-  return maxRequired;
+    // Buscar todos los hijos que dependen de este padre
+    Object.keys(state.levels).forEach(nodeId => {
+        const cfg = getNodeConfig(nodeId);
+        if (cfg && cfg.parents && cfg.parents.includes(parentId)) {
+            const childLevel = state.levels[nodeId]?.current || 0;
+            
+            if (childLevel > 0) {
+                if (cfg.type === 'secondary') {
+                    // Secundario necesita principal al mismo nivel (múltiplo de 20)
+                    const required = Math.ceil(childLevel / 20) * 20;
+                    maxRequired = Math.max(maxRequired, required);
+                }
+                else if (cfg.type === 'tertiary') {
+                    // Terciario necesita secundario al mismo nivel
+                    const required = Math.ceil(childLevel / 20) * 20;
+                    maxRequired = Math.max(maxRequired, required);
+                }
+                else if (cfg.type === 'mid') {
+                    // Mid necesita terciarios: nivel_mid * 2
+                    const required = Math.ceil(childLevel / 10) * 20;
+                    maxRequired = Math.max(maxRequired, required);
+                }
+            }
+        }
+    });
+    
+    return maxRequired;
 }
 
 // ======================== FUNCIONES DE UTILIDAD =============================== 
@@ -3479,7 +3481,7 @@ function handleNodeUpgrade(treeId, nodeElem) {
     return upgradeNodeWithParentPush(treeId, nodeId);
 }
 
-// NUEVA: Actualizar estado visual de nodos
+// Función para actualizar estado visual de un nodo (colores)
 function updateNodeVisualState(treeId, nodeId) {
     const elem = getNodeElement(treeId, nodeId);
     if (!elem) return;
@@ -4306,7 +4308,7 @@ function saveBuild(buildName) {
     }
 }
 
-// Cargar una build
+// Cargar una build (VERSIÓN MEJORADA CON ACTUALIZACIÓN VISUAL)
 function loadBuild(buildName) {
     try {
         const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
@@ -4342,13 +4344,37 @@ function loadBuild(buildName) {
         globalFinalPointsLeft = buildData.globalFinalPointsLeft !== undefined ? buildData.globalFinalPointsLeft : 3;
         totalPointsSpent = buildData.totalPointsSpent || 0;
         
-        // Actualizar UI
+        // ACTUALIZACIÓN CRÍTICA: Forzar actualización visual de CADA NODO
+        function updateAllNodesVisuals() {
+            ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+                const state = treesState[treeId];
+                
+                // Para cada nodo en este árbol
+                Object.keys(state.levels).forEach(nodeId => {
+                    // Actualizar display del nodo
+                    updateNodeDisplay(treeId, nodeId);
+                    
+                    // Actualizar estado visual (colores)
+                    updateNodeVisualState(treeId, nodeId);
+                });
+            });
+        }
+        
+        // Actualizar UI global primero
         updateGlobalUI();
         
-        // Re-inicializar todos los árboles
+        // Re-inicializar todos los árboles (esto recrea la estructura)
         ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
             initTree(treeId);
         });
+        
+        // ACTUALIZACIÓN EXTRA: Forzar refresh de allowed displays
+        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+            refreshAllowedDisplays(treeId);
+        });
+        
+        // ACTUALIZACIÓN FINAL: Actualizar visuales de todos los nodos
+        updateAllNodesVisuals();
         
         setLog(`Build "${buildName}" cargada correctamente.`);
         return true;
