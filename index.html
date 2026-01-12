@@ -2053,6 +2053,7 @@ function downgradeNodeWithChildPull(treeId, nodeId) {
   return true;
 }
 
+// 6. CALCULAR NIVEL REQUERIDO POR LOS HIJOS
 // Calcular nivel requerido por los hijos de un nodo
 function calculateLevelRequiredByChildren(treeId, parentId) {
     const state = treesState[treeId];
@@ -3481,6 +3482,7 @@ function handleNodeUpgrade(treeId, nodeElem) {
     return upgradeNodeWithParentPush(treeId, nodeId);
 }
 
+// NUEVA: Actualizar estado visual de nodos
 // Función para actualizar estado visual de un nodo (colores)
 function updateNodeVisualState(treeId, nodeId) {
     const elem = getNodeElement(treeId, nodeId);
@@ -4308,6 +4310,7 @@ function saveBuild(buildName) {
     }
 }
 
+// Cargar una build
 // Cargar una build (VERSIÓN MEJORADA CON ACTUALIZACIÓN VISUAL)
 function loadBuild(buildName) {
     try {
