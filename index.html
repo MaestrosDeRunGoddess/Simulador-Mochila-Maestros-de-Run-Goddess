@@ -87,11 +87,12 @@ h1 {
 }
 
 .tabs {
-    display: flex;
+    display: flex !important;
+    justify-content: center !important;
     margin-bottom: 10px;
     gap: 5px;
     flex-wrap: wrap;
-    justify-content: center;
+    width: 100%;
 }
 
 .tab-button {
@@ -218,6 +219,45 @@ align-items: center;
 .node-critical {
     animation: pulse-critical 1s infinite;
     border-color: #ff0000 !important;
+}
+/* ============= LOGO EN NODO RAÍZ ============= */
+.node.root {
+    background: rgba(0, 255, 128, 0.25) !important;
+    border: 2px solid #00ff80 !important;
+    overflow: hidden;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+.root-logo-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.root-logo {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
+/* Para móviles */
+@media (max-width: 768px) {
+    .root-logo {
+        width: 65%;
+        height: 65%;
+    }
+}
+
+@media (max-width: 480px) {
+    .root-logo {
+        width: 60%;
+        height: 60%;
+    }
 }
 
 @keyframes pulse-critical {
@@ -444,7 +484,14 @@ button:hover {
     color: #aaa;
     margin-top: 3px;
 }
+/* Para cuando estamos en "Acerca de" */
+.main-layout.about-mode .stats-sidebar {
+    display: none !important;
+}
 
+.main-layout.about-mode .tree-main-container {
+    flex: 1 0 100% !important;
+}
 #log {
     margin-top: 10px;
     font-size: 12px;
@@ -641,6 +688,112 @@ button:hover {
     border-color: #1e90ff !important;
     box-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
 }
+/* CONTENEDOR DE "ACERCA DE" (OCUPA EL 70% IZQUIERDO) */
+.about-main-container {
+    flex: 7;
+    display: flex;
+    flex-direction: column;
+    background: rgba(20, 25, 45, 0.3);
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 80vh;
+}
+
+/* ESTILOS PARA EL CONTENIDO DE "ACERCA DE" */
+.about-content {
+    color: #eee;
+    line-height: 1.6;
+}
+
+.about-content h2 {
+    color: #1e90ff;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.about-content h3 {
+    color: #ffd700;
+    margin: 20px 0 10px 0;
+}
+
+.about-content p {
+    margin-bottom: 10px;
+}
+
+.about-content ul {
+    padding-left: 20px;
+    margin-bottom: 15px;
+}
+
+.about-content li {
+    margin-bottom: 5px;
+}
+
+.about-content a {
+    color: #1e90ff;
+    text-decoration: none;
+}
+
+.about-content a:hover {
+    text-decoration: underline;
+}
+/* ============= LOGO EN NODO RAÍZ ============= */
+.root {
+    background: rgba(0, 255, 128, 0.25) !important;
+    border: 2px solid #00ff80 !important;
+    overflow: hidden;
+}
+
+.root-logo-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.root-logo {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
+.root-logo-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 255, 128, 0.3);
+    border-radius: 50%;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+/* Para móviles */
+@media (max-width: 768px) {
+    .root-logo {
+        width: 75%;
+        height: 75%;
+    }
+    .root-logo-fallback {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .root-logo {
+        width: 70%;
+        height: 70%;
+    }
+    .root-logo-fallback {
+        font-size: 16px;
+    }
+}
 </style>
 </head>
 
@@ -668,96 +821,181 @@ button:hover {
     </div>
 </div>
 
-
-<div class="tabs">
-    <button class="tab-button active" data-tab="guardian">Guardian</button>
-    <button class="tab-button" data-tab="vanguardia">Vanguardia</button>
-    <button class="tab-button" data-tab="canon">Cañón</button>
+<!-- CONTENEDOR CENTRADOR PARA PESTAÑAS -->
+<div style="width: 100%; text-align: center; margin: 15px 0;">
+    <div class="tabs" style="display: inline-flex; justify-content: center;">
+        <button class="tab-button active" data-tab="guardian" data-i18n-key="Guardian">Guardian</button>
+        <button class="tab-button" data-tab="vanguardia" data-i18n-key="Vanguardia">Vanguardia</button>
+        <button class="tab-button" data-tab="canon" data-i18n-key="Cañón">Cañón</button>
+        <button class="tab-button" data-tab="about" data-i18n-key="Acerca de">Acerca de</button>
+    </div>
+</div>
+<div id="about" class="tab-content">
+    <div style="padding: 20px; max-width: 800px; margin: 0 auto; color: #eee;">
+        <!-- Contenido de la pestaña Acerca de -->
+        <h2 style="color: #1e90ff; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px;">
+            Simulador Mochila - Maestros de Run Goddess
+        </h2>
+        
+        <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #1e90ff; margin-bottom: 20px;">
+            <h3 style="color: #ffd700; margin-bottom: 15px;">👨‍💻 Creador</h3>
+            <p><strong>Nombre:</strong> Diabolikzx</p>
+            <p><strong>Contacto:</strong> Maestros de Run Goddess</p>
+            <p><strong>Facebook:</strong> <a href="https://www.facebook.com/share/18LCK14qsu/" target="_blank" style="color: #1e90ff; text-decoration: none;">Maestros de Run Goddess</a></p>
+        </div>
+        
+        <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #00ce9d; margin-bottom: 20px;">
+            <h3 style="color: #ffd700; margin-bottom: 15px;">📖 Instrucciones Rápidas</h3>
+            <ul style="padding-left: 20px;">
+                <li>Usa <strong>clic</strong> para subir un nivel</li>
+                <li>Usa <strong>clic sostenido</strong> para bajar niveles</li>
+                <li><strong>Doble clic</strong> sube al siguiente hito (nivel 20, 40, 60, etc.)</li>
+                <li>Los nodos en <span style="color: #00ff00">verde</span> están optimizados</li>
+                <li>Los nodos en <span style="color: #ff0000">rojo</span> necesitan atención</li>
+                <li>Puedes guardar builds y cargarlas después</li>
+            </ul>
+        </div>
+        
+        <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #ff8c00; margin-bottom: 20px;">
+            <h3 style="color: #ffd700; margin-bottom: 15px;">⚙️ Información Técnica</h3>
+            <p><strong>Versión:</strong> 2.0</p>
+            <p><strong>Última actualización:</strong> 11 de enero de 2025</p>
+            <p><strong>Idiomas disponibles:</strong> Español, Inglés, Francés, Alemán, Portugués, Chino</p>
+            <p><strong>Compatibilidad:</strong> Desktop y móvil</p>
+        </div>
+        
+        <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #9d4edd; text-align: center; font-size: 14px; color: #aaa;">
+            <p>Este simulador fue creado para la comunidad de <strong>Maestros de Run Goddess</strong></p>
+            <p>¡Disfruta optimizando tus builds! 🎮</p>
+        </div>
+    </div>
 </div>
 
-<!-- LAYOUT: ÁRBOL IZQUIERDA (70%), ESTADÍSTICAS DERECHA (30%) -->
+<!-- LAYOUT PRINCIPAL -->
 <div class="main-layout">
     <!-- CONTENEDOR DEL ÁRBOL (IZQUIERDA - 70%) -->
-    <div class="tree-main-container">
-    <center><h3>Árbol de Habilidades - <span id="current-tab-name">Guardian</span></h3></center>
-    <div class="tree-container-wrapper">
-        <div id="guardian" class="tab-content active">
-        <div class="tree-container" data-tree-id="guardian"></div>
+    <div class="tree-main-container" id="tree-container">
+        <center><h3>Árbol de Habilidades - <span id="current-tab-name">Guardian</span></h3></center>
+        <div class="tree-container-wrapper">
+            <div id="guardian" class="tab-content active">
+                <div class="tree-container" data-tree-id="guardian"></div>
+            </div>
+            <div id="vanguardia" class="tab-content">
+                <div class="tree-container" data-tree-id="vanguardia"></div>
+            </div>
+            <div id="canon" class="tab-content">
+                <div class="tree-container" data-tree-id="canon"></div>
+            </div>
+            <div id="about" class="tab-content">
+                <!-- CONTENIDO DE "ACERCA DE" OCUPANDO TODO EL ESPACIO -->
+                <div style="padding: 30px; color: #eee; width: 100%; height: 100%; overflow-y: auto;">
+                    <h2 style="color: #1e90ff; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px;">
+                        Simulador Mochila - Maestros de Run Goddess
+                    </h2>
+                    
+                    <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #1e90ff; margin-bottom: 20px;">
+                        <h3 style="color: #ffd700; margin-bottom: 15px;">👨‍💻 Creador</h3>
+                        <p><strong>Nombre:</strong> [Tu nombre aquí]</p>
+                        <p><strong>Contacto:</strong> [Tu correo o enlace de contacto]</p>
+                        <p><strong>Facebook:</strong> <a href="[TU_ENLACE_DE_FACEBOOK]" target="_blank" style="color: #1e90ff; text-decoration: none;">[Tu página de Facebook]</a></p>
+                    </div>
+                    
+                    <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #00ce9d; margin-bottom: 20px;">
+                        <h3 style="color: #ffd700; margin-bottom: 15px;">📖 Instrucciones Rápidas</h3>
+                        <ul style="padding-left: 20px;">
+                            <li>Usa <strong>clic</strong> para subir un nivel</li>
+                            <li>Usa <strong>clic sostenido</strong> para bajar niveles</li>
+                            <li><strong>Doble clic</strong> sube al siguiente hito (nivel 20, 40, 60, etc.)</li>
+                            <li>Los nodos en <span style="color: #00ff00">verde</span> están optimizados</li>
+                            <li>Los nodos en <span style="color: #ff0000">rojo</span> necesitan atención</li>
+                            <li>Puedes guardar builds con el sistema de la derecha</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #ff8c00; margin-bottom: 20px;">
+                        <h3 style="color: #ffd700; margin-bottom: 15px;">⚙️ Información Técnica</h3>
+                        <p><strong>Versión:</strong> 2.0</p>
+                        <p><strong>Última actualización:</strong> [Fecha de hoy]</p>
+                        <p><strong>Idiomas disponibles:</strong> Español, Inglés, Francés, Alemán, Portugués, Chino</p>
+                        <p><strong>Compatibilidad:</strong> Desktop y móvil</p>
+                    </div>
+                    
+                    <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #9d4edd; text-align: center; font-size: 14px; color: #aaa;">
+                        <p>Este simulador fue creado para la comunidad de <strong>Maestros de Run Goddess</strong></p>
+                        <p>¡Disfruta optimizando tus builds! 🎮</p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div id="vanguardia" class="tab-content">
-        <div class="tree-container" data-tree-id="vanguardia"></div>
-        </div>
-        <div id="canon" class="tab-content">
-        <div class="tree-container" data-tree-id="canon"></div>
-        </div>
-    </div>
     </div>
 
-    <!-- PANEL DE ESTADÍSTICAS (DERECHA - 30% - SIEMPRE VISIBLE) -->
-    <div class="stats-sidebar">
-    <h3>Estadísticas</h3>
-    
-    <!-- PRIMERO: BONIFICACIONES ESPECÍFICAS (solo stats con valor > 0) -->
-    <div class="specific-stats-section">
-        <h4>Bonificaciones Activas</h4>
-        <div class="specific-stats-grid" id="specific-stats-grid">
-        <!-- Aquí se insertarán dinámicamente los stats específicos CON VALOR > 0 -->
-        </div>
-    </div>
-    
-    <!-- DESPUÉS: ESTADÍSTICAS GLOBALES -->
-    <div class="stats-global-grid">
-        <div class="global-stat-item">
-        <h4>Total niveles invertidos</h4>
-        <div class="global-stat-value" id="total-levels">0</div>
-        <div class="global-stat-sub">Suma de todos los niveles</div>
+    <!-- PANEL DE ESTADÍSTICAS Y BUILDS (DERECHA - 30%) -->
+    <div class="stats-sidebar" id="stats-sidebar">
+        <h3>Estadísticas</h3>
+        
+        <!-- PRIMERO: BONIFICACIONES ESPECÍFICAS (solo stats con valor > 0) -->
+        <div class="specific-stats-section">
+            <h4>Bonificaciones Activas</h4>
+            <div class="specific-stats-grid" id="specific-stats-grid">
+                <!-- Aquí se insertarán dinámicamente los stats específicos CON VALOR > 0 -->
+            </div>
         </div>
         
-        <div class="global-stat-item">
-        <h4>Total puntos gastados</h4>
-        <div class="global-stat-value" id="total-points-spent">0</div>
-        <div class="global-stat-sub">Puntos de tecnología utilizados</div>
+        <!-- DESPUÉS: ESTADÍSTICAS GLOBALES -->
+        <div class="stats-global-grid">
+            <div class="global-stat-item">
+                <h4>Total niveles invertidos</h4>
+                <div class="global-stat-value" id="total-levels">0</div>
+                <div class="global-stat-sub">Suma de todos los niveles</div>
+            </div>
+            
+            <div class="global-stat-item">
+                <h4>Total puntos gastados</h4>
+                <div class="global-stat-value" id="total-points-spent">0</div>
+                <div class="global-stat-sub">Puntos de tecnología utilizados</div>
+            </div>
+            
+            <div class="global-stat-item">
+                <h4>Nodos Finales obtenidos</h4>
+                <div class="global-stat-value" id="total-final-nodes">0 / 3</div>
+                <div class="global-stat-sub">Daños Finales completados</div>
+            </div>
+            
+            <div class="global-stat-item">
+                <h4>Ramas completadas</h4>
+                <div class="global-stat-value" id="completed-branches">0 / 9</div>
+                <div class="global-stat-sub">Ramas terminadas en todas las pestañas</div>
+            </div>
         </div>
         
-        <div class="global-stat-item">
-        <h4>Nodos Finales obtenidos</h4>
-        <div class="global-stat-value" id="total-final-nodes">0 / 3</div>
-        <div class="global-stat-sub">Daños Finales completados</div>
+        <!-- SISTEMA DE BUILDS -->
+        <div class="buttons-container">
+            <button id="reset-current">Reiniciar pestaña</button>
+            <button id="reset-all">Reiniciar todo</button>
+            
+            <!-- NUEVOS BOTONES PARA GUARDAR/CARGAR MEJORADOS -->
+            <div style="margin-top: 10px; border-top: 1px solid #444; padding-top: 10px; text-align: center;">
+                <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 10px;">
+                    <input type="text" id="build-name" placeholder="Nombre de build" 
+                           style="padding: 6px; border-radius: 4px; border: 1px solid #444; background: #1a1f2e; color: white; width: 160px;">
+                    <button id="save-build" style="background: #00ce9d; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer;">💾 Guardar</button>
+                </div>
+                
+                <button id="load-builds-toggle" style="background: #9d4edd; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; width: 200px; margin-bottom: 5px;">
+                    📂 Cargar Build Guardada ▼
+                </button>
+                
+                <div id="saved-builds-list" style="background: rgba(20, 25, 45, 0.95); border: 1px solid #444; border-radius: 4px; margin-top: 5px; max-height: 250px; overflow-y: auto; display: none; text-align: left; position: relative; z-index: 1000;">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+                
+                <button id="delete-all-builds" style="background: transparent; border: 1px solid #ff4757; color: #ff4757; padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 10px; display: none;">
+                    🗑️ Borrar Todas las Builds
+                </button>
+            </div>
         </div>
         
-        <div class="global-stat-item">
-        <h4>Ramas completadas</h4>
-        <div class="global-stat-value" id="completed-branches">0 / 9</div>
-        <div class="global-stat-sub">Ramas terminadas en todas las pestañas</div>
-        </div>
-    </div>
-    
-    <div class="buttons-container">
-    <button id="reset-current">Reiniciar pestaña</button>
-    <button id="reset-all">Reiniciar todo</button>
-    
-    <!-- NUEVOS BOTONES PARA GUARDAR/CARGAR MEJORADOS -->
-<div style="margin-top: 10px; border-top: 1px solid #444; padding-top: 10px; text-align: center;">
-    <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 10px;">
-        <input type="text" id="build-name" placeholder="Nombre de build" 
-               style="padding: 6px; border-radius: 4px; border: 1px solid #444; background: #1a1f2e; color: white; width: 160px;">
-        <button id="save-build" style="background: #00ce9d; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer;">💾 Guardar</button>
-    </div>
-    
-    <button id="load-builds-toggle" style="background: #9d4edd; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; width: 200px; margin-bottom: 5px;">
-        📂 Cargar Build Guardada ▼
-    </button>
-    
-    <div id="saved-builds-list" style="background: rgba(20, 25, 45, 0.95); border: 1px solid #444; border-radius: 4px; margin-top: 5px; max-height: 250px; overflow-y: auto; display: none; text-align: left; position: relative; z-index: 1000;">
-        <!-- Se llenará dinámicamente -->
-    </div>
-    
-    <button id="delete-all-builds" style="background: transparent; border: 1px solid #ff4757; color: #ff4757; padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 10px; display: none;">
-        🗑️ Borrar Todas las Builds
-    </button>
-</div>
-    
-    <div id="log"></div>
+        <div id="log"></div>
     </div>
 </div>
 
@@ -861,7 +1099,16 @@ const translations = {
         "Crit.Hab": "Crit.Hab",
         "Penetrac": "Penetrac",
         "Gol.Crit": "Gol.Crit",
-        "Res.Crit": "Res.Crit"
+        "Res.Crit": "Res.Crit",
+        // Para español (ya está en español, pero asegúrate):
+"Acerca de": "Acerca de",
+// Sistema de builds, guardar y más
+    "Guardar": "Guardar",
+    "Cargar Build Guardada": "Cargar Build Guardada", 
+    "Borrar Todas": "Borrar Todas",
+    "Nombre de build": "Nombre de build",
+    "Cargar": "Cargar",
+    "No hay builds guardadas": "No hay builds guardadas"
     },
     en: {
         "Árbol de Tecnologías": "Technology Tree",
@@ -947,7 +1194,16 @@ const translations = {
         "Crit.Hab": "Skill Crit",
         "Penetrac": "Penetration",
         "Gol.Crit": "Crit Hit",
-        "Res.Crit": "Res.Crit"
+        "Res.Crit": "Res.Crit",
+        // Para inglés:
+"Acerca de": "About",
+    // Traducción de botones del sistema de builds
+    "Guardar": "Save",
+    "Cargar Build Guardada": "Load Saved Build",
+    "Borrar Todas": "Delete All", 
+    "Nombre de build": "Build name",
+    "Cargar": "Load",
+    "No hay builds guardadas": "No saved builds"
     },
     fr: {
         "Árbol de Tecnologías": "Arbre Technologique",
@@ -1033,8 +1289,18 @@ const translations = {
         "Crit.Hab": "Crit.Comp",
         "Penetrac": "Pénétration",
         "Gol.Crit": "Coup Crit",
-        "Res.Crit": "Rés.Crit"
-    },
+        "Res.Crit": "Rés.Crit",
+        // Para francés:
+"Acerca de": "À propos",
+// traducción del sistema de builds
+    "Guardar": "Sauvegarder",
+    "Cargar Build Guardada": "Charger Build Sauvegardée",
+    "Borrar Todas": "Tout Supprimer",
+    "Nombre de build": "Nom de la build",
+    "Cargar": "Charger",
+    "No hay builds guardadas": "Aucune build sauvegardée"
+},
+
     de: {
         "Árbol de Tecnologías": "Technologiebaum",
         "Árbol de Habilidades - ": "Fähigkeitenbaum - ",
@@ -1119,8 +1385,18 @@ const translations = {
         "Crit.Hab": "Fert.Crit",
         "Penetrac": "Durchdring",
         "Gol.Crit": "Krit.Treff",
-        "Res.Crit": "Res.Crit"
+        "Res.Crit": "Res.Crit",
+        // Para alemán:
+"Acerca de": "Über",
+// traducción del sistema de builds
+    "Guardar": "Speichern",
+    "Cargar Build Guardada": "Gespeicherte Build Laden", 
+    "Borrar Todas": "Alle Löschen",
+    "Nombre de build": "Build-Name",
+    "Cargar": "Laden",
+    "No hay builds guardadas": "Keine gespeicherten Builds"
     },
+    
     pt: {
         "Árbol de Tecnologías": "Árvore Tecnológica",
         "Árbol de Habilidades - ": "Árvore de Habilidades - ",
@@ -1205,8 +1481,18 @@ const translations = {
         "Crit.Hab": "Crit.Hab",
         "Penetrac": "Penetração",
         "Gol.Crit": "Gol.Crit",
-        "Res.Crit": "Res.Crit"
+        "Res.Crit": "Res.Crit",
+        // Para portugués:
+"Acerca de": "Sobre",
+// traducción del sistema de builds
+    "Guardar": "Salvar",
+    "Cargar Build Guardada": "Carregar Build Salva",
+    "Borrar Todas": "Apagar Todas",
+    "Nombre de build": "Nome da build",
+    "Cargar": "Carregar",
+    "No hay builds guardadas": "Nenhuma build salva"
     },
+    
     zh: {
         "Árbol de Tecnologías": "科技树",
         "Árbol de Habilidades - ": "技能树 - ",
@@ -1291,25 +1577,38 @@ const translations = {
         "Crit.Hab": "技能暴击",
         "Penetrac": "穿透",
         "Gol.Crit": "暴击",
-        "Res.Crit": "抗暴击"
+        "Res.Crit": "抗暴击",
+        // Para chino:
+"Acerca de": "关于",
+// traducción del sistema de builds
+    "Guardar": "保存",
+    "Cargar Build Guardada": "加载保存的配置",
+    "Borrar Todas": "删除全部",
+    "Nombre de build": "配置名称",
+    "Cargar": "加载",
+    "No hay builds guardadas": "没有保存的配置"
     }
 };
+
 // ======================== FUNCIÓN DE CAMBIO DE IDIOMA ===========================
 function changeLanguage(lang) {
     const texts = translations[lang] || translations.es;
     
-    // 1. Título principal
+    // 1. GUARDAR IDIOMA PRIMERO
+    localStorage.setItem('tech-tree-language', lang);
+    
+    // 2. Título principal
     const h1 = document.querySelector('h1');
     if (h1) h1.textContent = texts["Árbol de Tecnologías"];
     
-    // 2. Recursos
+    // 3. Recursos
     const techPointsSpan = document.getElementById('tech-points');
     if (techPointsSpan) {
         const points = techPointsSpan.textContent;
         document.querySelector('#resources').innerHTML = texts["Puntos de tecnología: "] + `<span id="tech-points">${points}</span>`;
     }
     
-    // 3. Información global
+    // 4. Información global
     const finalLeftSpan = document.getElementById('global-final-left');
     if (finalLeftSpan) {
         const finalPoints = finalLeftSpan.textContent;
@@ -1318,29 +1617,38 @@ function changeLanguage(lang) {
             texts["Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final."];
     }
     
-    // 4. Pestañas
-    document.querySelectorAll('.tab-button').forEach((btn, i) => {
-        const tabNames = ["Guardian", "Vanguardia", "Cañón"];
-        if (i < tabNames.length) {
-            btn.textContent = texts[tabNames[i]];
+    // 5. Pestañas (USANDO data-i18n-key)
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        const i18nKey = btn.dataset.i18nKey;
+        if (i18nKey && texts[i18nKey]) {
+            btn.textContent = texts[i18nKey];
         }
     });
     
-    // 5. Título del árbol actual
+    // 6. Título del árbol actual (según pestaña activa)
     const currentTabNameEl = document.getElementById('current-tab-name');
     const activeTabBtn = document.querySelector('.tab-button.active');
     if (currentTabNameEl && activeTabBtn) {
-        currentTabNameEl.textContent = activeTabBtn.textContent;
+        const tabId = activeTabBtn.dataset.tab;
+        if (tabId === 'about') {
+            // Si es la pestaña "Acerca de"
+            currentTabNameEl.textContent = texts["Acerca de"];
+        } else {
+            // Si es una pestaña normal
+            const tabName = tabId === "guardian" ? "Guardian" : 
+                           tabId === "vanguardia" ? "Vanguardia" : "Cañón";
+            currentTabNameEl.textContent = texts[tabName] || tabName;
+        }
     }
     
-    // 6. Panel de estadísticas
+    // 7. Panel de estadísticas
     const statsTitle = document.querySelector('.stats-sidebar h3');
     if (statsTitle) statsTitle.textContent = texts["Estadísticas"];
     
     const bonusesTitle = document.querySelector('.specific-stats-section h4');
     if (bonusesTitle) bonusesTitle.textContent = texts["Bonificaciones Activas"];
     
-    // 7. Estadísticas globales
+    // 8. Estadísticas globales
     const globalTitles = document.querySelectorAll('.global-stat-item h4');
     if (globalTitles.length >= 4) {
         globalTitles[0].textContent = texts["Total niveles invertidos"];
@@ -1357,81 +1665,46 @@ function changeLanguage(lang) {
         globalSubs[3].textContent = texts["Ramas terminadas en todas las pestañas"];
     }
     
-    // 8. Botones
+    // 9. Botones
     const resetCurrent = document.getElementById('reset-current');
     const resetAll = document.getElementById('reset-all');
+    const saveBuild = document.getElementById('save-build');
+    const loadBuildsToggle = document.getElementById('load-builds-toggle');
+    const deleteAllBuilds = document.getElementById('delete-all-builds');
+    
     if (resetCurrent) resetCurrent.textContent = texts["Reiniciar pestaña"];
     if (resetAll) resetAll.textContent = texts["Reiniciar todo"];
+    if (saveBuild) saveBuild.textContent = "💾 " + texts["Guardar"];
+    if (loadBuildsToggle) {
+        const isOpen = loadBuildsToggle.innerHTML.includes('▲');
+        loadBuildsToggle.innerHTML = isOpen ? 
+            '📂 ' + texts["Cargar Build Guardada"] + ' ▲' : 
+            '📂 ' + texts["Cargar Build Guardada"] + ' ▼';
+    }
+    if (deleteAllBuilds) deleteAllBuilds.textContent = "🗑️ " + texts["Borrar Todas"];
     
-    // 9. Traducir nombres de nodos en TODOS los árboles
-    const allTreeIds = ['guardian', 'vanguardia', 'canon'];
-    allTreeIds.forEach(treeId => {
-        translateTreeNodes(treeId, texts);
-    });
+    // 10. Placeholder del input de build
+    const buildNameInput = document.getElementById('build-name');
+    if (buildNameInput) {
+        buildNameInput.placeholder = texts["Nombre de build"];
+    }
     
-    // 10. Asegurar que todos los stats tengan originalName
-    Object.keys(specificStats).forEach(key => {
-        const stat = specificStats[key];
-        if (!stat.originalName) {
-            stat.originalName = stat.name;
-        }
-    });
+    // 11. Traducir nombres de nodos en TODOS los árboles (solo si no están en "Acerca de")
+    if (activeTabBtn && activeTabBtn.dataset.tab !== 'about') {
+        const allTreeIds = ['guardian', 'vanguardia', 'canon'];
+        allTreeIds.forEach(treeId => {
+            translateTreeNodes(treeId, texts);
+        });
+    }
     
-    // 11. GUARDAR IDIOMA PRIMERO - ESTO ES CLAVE
-    localStorage.setItem('tech-tree-language', lang);
-    
-    // 12. Actualizar display de stats
+    // 12. Actualizar display de stats específicos
     updateSpecificStatsDisplay();
-}
-// Traducir Nodos
-function translateTreeNodes(treeId, texts) {
-    const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
-    if (!container) return;
     
-    // Traducir nodos existentes
-    const nodes = container.querySelectorAll('.node');
-    
-    nodes.forEach(node => {
-        const nodeId = node.dataset.id;
-        const cfg = getNodeConfig(nodeId);
-        if (!cfg) return;
-        
-        let translatedTitle = cfg.title;
-        
-        // Traducir según el tipo de nodo
-        if (cfg.type === "root") {
-            translatedTitle = texts["Centro"] || "Centro";
-        }
-        else if (cfg.type === "main") {
-            if (cfg.title === "Defensa") translatedTitle = texts["Defensa"] || "Defensa";
-            else if (cfg.title === "Vida") translatedTitle = texts["Vida"] || "Vida";
-            else if (cfg.title === "Ataque") translatedTitle = texts["Ataque"] || "Ataque";
-        }
-        else if (cfg.type === "secondary") {
-            if (cfg.title === "Defensa") translatedTitle = texts["Defensa"] || "Defensa";
-            else if (cfg.title === "Vida") translatedTitle = texts["Vida"] || "Vida";
-            else if (cfg.title === "Ataque") translatedTitle = texts["Ataque"] || "Ataque";
-        }
-        else if (cfg.type === "mid") {
-            if (cfg.title === "Defensa G") translatedTitle = texts["Defensa G"] || "Defensa G";
-            else if (cfg.title === "Vida G") translatedTitle = texts["Vida G"] || "Vida G";
-            else if (cfg.title === "Ataque G") translatedTitle = texts["Ataque G"] || "Ataque G";
-        }
-        else if (cfg.type === "final") {
-            translatedTitle = texts["Final"] || "Final";
-        }
-        else if (cfg.type === "tertiary") {
-            // Los nodos terciarios ya se traducen en getTertiaryDisplayTitle
-            translatedTitle = getTertiaryDisplayTitle(treeId, nodeId);
-        }
-        
-        // Actualizar el título en el nodo - SIEMPRE, aunque sea igual
-        const titleSpan = node.querySelector('.node-title');
-        if (titleSpan) {
-            // FORZAR la actualización siempre
-            titleSpan.textContent = translatedTitle;
-        }
-    });
+    // 13. Actualizar log si tiene texto traducible
+    if (logDiv.textContent.trim() !== "") {
+        const currentLog = logDiv.textContent;
+        setLog(currentLog);
+    }
 }
 // Fin de la traducción de nodos
 // ======================== VARIABLES GLOBALES ===========================
@@ -3292,11 +3565,9 @@ function refreshAllowedDisplays(treeId) {
     });
 }
 
-// =============================== FUNCIONES DE INICIALIZACIÓN =============================================================
+// =============================== FUNCIONES DE INICIALIZACIÓN 
 function initTree(treeId) {
-    const container = document.querySelector(
-        `.tree-container[data-tree-id="${treeId}"]`
-    );
+    const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
     if (!container) return;
 
     container.innerHTML = "";
@@ -3312,7 +3583,6 @@ function initTree(treeId) {
         containerWidth = wrapper.clientWidth;
         containerHeight = wrapper.clientHeight;
 
-        // Minimos para que funcione
         if (containerWidth < 300) containerWidth = 300;
         if (containerHeight < 200) containerHeight = 200;
 
@@ -3320,7 +3590,7 @@ function initTree(treeId) {
         container.style.height = containerHeight + "px";
     }
 
-    // Actualizar baseNodes con las nuevas dimensiones
+    // Actualizar baseNodes
     initializeBaseNodes();
 
     // Limpiar y recrear links
@@ -3332,35 +3602,53 @@ function initTree(treeId) {
         });
     });
 
-    // Crear nodos
+    // ============= CREAR NODOS =============
     baseNodes.forEach(cfg => {
         const nodeElem = document.createElement("div");
         nodeElem.classList.add("node");
-        if (cfg.type === "root") nodeElem.classList.add("root");
-        if (cfg.cssClass) nodeElem.classList.add(cfg.cssClass);
-        if (cfg.type === "final") nodeElem.classList.add("final-node");
+        
+        // NODO RAÍZ CON LOGO
+        if (cfg.type === "root") {
+            nodeElem.classList.add("root");
+            
+            // TU LOGO - CAMBIA EL NOMBRE SI ES DIFERENTE
+            const logoFileName = "logomrg.png";
+            
+            nodeElem.innerHTML = `
+                <div class="root-logo-container">
+                    <img src="${logoFileName}" 
+                         alt="Logo MRG"
+                         class="root-logo">
+                </div>
+            `;
+        } 
+        // NODOS NORMALES
+        else {
+            if (cfg.cssClass) nodeElem.classList.add(cfg.cssClass);
+            if (cfg.type === "final") nodeElem.classList.add("final-node");
+            
+            let displayTitle = cfg.title;
+            if (cfg.type === "tertiary") {
+                displayTitle = getTertiaryDisplayTitle(treeId, cfg.id);
+            }
+            
+            nodeElem.innerHTML = `
+                <span class="node-title">${displayTitle}</span>
+                <span class="node-level">0/${cfg.max}</span>
+                <span class="cost">C:${cfg.baseCost}</span>
+            `;
+        }
 
-        // Calcular posicion absoluta
+        // POSICIÓN Y TAMAÑO
         const x = (cfg.xPct / 100) * containerWidth;
         const y = (cfg.yPct / 100) * containerHeight;
 
-        // Ajustar tamaño del nodo para móvil
         let nodeSize = 80;
-        if (window.innerWidth <= 1200) {
-            nodeSize = 75;
-        }
-        if (window.innerWidth <= 900) {
-            nodeSize = 70;
-        }
-        if (window.innerWidth <= 768) {
-            nodeSize = 65;
-        }
-        if (window.innerWidth <= 600) {
-            nodeSize = 60;
-        }
-        if (window.innerWidth <= 400) {
-            nodeSize = 55;
-        }
+        if (window.innerWidth <= 1200) nodeSize = 75;
+        if (window.innerWidth <= 900) nodeSize = 70;
+        if (window.innerWidth <= 768) nodeSize = 65;
+        if (window.innerWidth <= 600) nodeSize = 60;
+        if (window.innerWidth <= 400) nodeSize = 55;
 
         nodeElem.style.width = nodeSize + "px";
         nodeElem.style.height = nodeSize + "px";
@@ -3369,88 +3657,62 @@ function initTree(treeId) {
         nodeElem.dataset.id = cfg.id;
         nodeElem.dataset.treeId = treeId;
 
-        let displayTitle = cfg.title;
+        // EVENTOS (excepto para root)
+        if (cfg.type !== "root") {
+            // Eventos mouse
+            nodeElem.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                startDowngradeTimer(treeId, cfg.id, nodeElem);
+            });
 
-        // CORRECCIÓN: Para nodos terciarios, usar los títulos reales de techDescriptions
-        if (cfg.type === "tertiary") {
-            displayTitle = getTertiaryDisplayTitle(treeId, cfg.id);
+            nodeElem.addEventListener("mouseup", (e) => {
+                e.preventDefault();
+                const holdTime = Date.now() - tapStartTime;
+                if (holdTime < 800) {
+                    handleNodeClick(treeId, nodeElem, e);
+                }
+                stopDowngradeTimer(nodeElem);
+            });
+
+            nodeElem.addEventListener("mouseleave", (e) => {
+                stopDowngradeTimer(nodeElem);
+            });
+
+            // Eventos touch
+            nodeElem.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                startDowngradeTimer(treeId, cfg.id, nodeElem);
+            });
+
+            nodeElem.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                const holdTime = Date.now() - tapStartTime;
+                if (holdTime < 800) {
+                    const simulatedEvent = { 
+                        ctrlKey: false, 
+                        metaKey: false,
+                        preventDefault: () => {} 
+                    };
+                    handleNodeClick(treeId, nodeElem, simulatedEvent);
+                }
+                stopDowngradeTimer(nodeElem);
+            });
+
+            nodeElem.addEventListener("touchcancel", (e) => {
+                stopDowngradeTimer(nodeElem);
+            });
         }
 
-        const titleSpan = document.createElement("span");
-        titleSpan.classList.add("node-title");
-        titleSpan.textContent = displayTitle;
-
-        const levelSpan = document.createElement("span");
-        levelSpan.classList.add("node-level");
-        const currentLevel = state.levels[cfg.id] ? state.levels[cfg.id].current : 0;
-        levelSpan.textContent = cfg.max > 0 ? `${currentLevel}/${cfg.max}` : "-";
-
-        const costSpan = document.createElement("span");
-        costSpan.classList.add("cost");
-        const currentCost = calculateCurrentCost(cfg.id, currentLevel);
-        costSpan.textContent = `C:${currentCost}`;
-
-        nodeElem.appendChild(titleSpan);
-        nodeElem.appendChild(levelSpan);
-        nodeElem.appendChild(costSpan);
         container.appendChild(nodeElem);
 
+        // INICIALIZAR ESTADO
         if (!state.levels[cfg.id]) {
             state.levels[cfg.id] = { current: 0, max: cfg.max };
         }
+    });
+    // ============= FIN CREAR NODOS =============
 
-        // Eventos para tap sostenido
-        nodeElem.addEventListener("mousedown", (e) => {
-            if (cfg.type === "root") return;
-            e.preventDefault();
-            startDowngradeTimer(treeId, cfg.id, nodeElem);
-        });
-
-        nodeElem.addEventListener("touchstart", (e) => {
-            if (cfg.type === "root") return;
-            e.preventDefault();
-            startDowngradeTimer(treeId, cfg.id, nodeElem);
-        });
-
-        // Eventos para detener
-nodeElem.addEventListener("mouseup", (e) => {
-    e.preventDefault();
-    const holdTime = Date.now() - tapStartTime;
-    
-    if (holdTime < HOLD_DELAY) {
-        // Usar el NUEVO sistema de clicks diferenciados
-        handleNodeClick(treeId, nodeElem, e);
-    }
-    
-    stopDowngradeTimer(nodeElem);
-});
-
-nodeElem.addEventListener("mouseleave", (e) => {
-    stopDowngradeTimer(nodeElem);
-});
-
-nodeElem.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    const holdTime = Date.now() - tapStartTime;
-    
-    if (holdTime < HOLD_DELAY) {
-        // Para touch: simular evento de mouse
-        const simulatedEvent = { 
-            ctrlKey: false, 
-            metaKey: false,
-            preventDefault: () => {} 
-        };
-        handleNodeClick(treeId, nodeElem, simulatedEvent);
-    }
-    
-    stopDowngradeTimer(nodeElem);
-});
-
-nodeElem.addEventListener("touchcancel", (e) => {
-    stopDowngradeTimer(nodeElem);
-});
-});
-    // Crear lineas
+    // Crear líneas entre nodos
     links.forEach(link => {
         const fromCfg = getNodeConfig(link.from);
         const toCfg = getNodeConfig(link.to);
@@ -3572,30 +3834,139 @@ function resetCurrentTab() {
     setLog(`Pestaña ${tabId} reiniciada. +${totalRefund} pts.`);
 }
 
-// -- INICIALIZACIÓN --
+// Función para traducir nodos del árbol
+function translateTreeNodes(treeId, texts) {
+    const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
+    if (!container) return;
+    
+    const nodes = container.querySelectorAll('.node');
+    
+    nodes.forEach(node => {
+        const nodeId = node.dataset.id;
+        const cfg = getNodeConfig(nodeId);
+        if (!cfg) return;
+        
+        let translatedTitle = cfg.title;
+        
+        // Traducir según el tipo de nodo
+        if (cfg.type === "root") {
+            translatedTitle = texts["Centro"] || "Centro";
+        }
+        else if (cfg.type === "main") {
+            if (cfg.title === "Defensa") translatedTitle = texts["Defensa"] || "Defensa";
+            else if (cfg.title === "Vida") translatedTitle = texts["Vida"] || "Vida";
+            else if (cfg.title === "Ataque") translatedTitle = texts["Ataque"] || "Ataque";
+        }
+        else if (cfg.type === "secondary") {
+            if (cfg.title === "Defensa") translatedTitle = texts["Defensa"] || "Defensa";
+            else if (cfg.title === "Vida") translatedTitle = texts["Vida"] || "Vida";
+            else if (cfg.title === "Ataque") translatedTitle = texts["Ataque"] || "Ataque";
+        }
+        else if (cfg.type === "mid") {
+            if (cfg.title === "Defensa G") translatedTitle = texts["Defensa G"] || "Defensa G";
+            else if (cfg.title === "Vida G") translatedTitle = texts["Vida G"] || "Vida G";
+            else if (cfg.title === "Ataque G") translatedTitle = texts["Ataque G"] || "Ataque G";
+        }
+        else if (cfg.type === "final") {
+            translatedTitle = texts["Final"] || "Final";
+        }
+        else if (cfg.type === "tertiary") {
+            translatedTitle = getTertiaryDisplayTitle(treeId, nodeId);
+        }
+        
+        const titleSpan = node.querySelector('.node-title');
+        if (titleSpan) {
+            titleSpan.textContent = translatedTitle;
+        }
+    });
+}
+
+// -- MANEJO DE PESTAÑAS --
 document.querySelectorAll(".tab-button").forEach(btn => {
     btn.addEventListener("click", () => {
         const tabId = btn.dataset.tab;
+        
+        // 1. Actualizar botones activos
         document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
         btn.classList.add("active");
-        document.getElementById(tabId).classList.add("active");
-
-        // Traducir nombre de la pestaña activa
+        
+        // 2. Ocultar todos los contenidos primero
+        document.querySelectorAll(".tab-content").forEach(c => {
+            c.classList.remove("active");
+        });
+        
+        // 3. Mostrar el contenido seleccionado
+        const activeContent = document.getElementById(tabId);
+        if (activeContent) {
+            activeContent.classList.add("active");
+        }
+        
+        // 4. Obtener elementos del DOM
+        const currentTabNameEl = document.getElementById("current-tab-name");
+        const statsSidebar = document.getElementById("stats-sidebar");
+        const treeContainer = document.getElementById("tree-container");
+        
+        // 5. Manejar "Acerca de" vs otras pestañas
+        if (tabId === "about") {
+            // En "Acerca de": OCULTAR TODO el contenedor del árbol y mostrar solo el contenido
+            if (treeContainer) treeContainer.style.display = "none";
+            if (statsSidebar) statsSidebar.style.display = "none";
+            if (currentTabNameEl) currentTabNameEl.textContent = "Acerca de";
+            
+            // Asegurarse de que el contenido "about" sea visible
+            const aboutContent = document.getElementById("about");
+            if (aboutContent) {
+                aboutContent.style.display = "block";
+            }
+        } else {
+            // Para las otras pestañas: MOSTRAR el contenedor del árbol
+            if (treeContainer) {
+                treeContainer.style.display = "flex";
+                treeContainer.style.flex = "7";
+            }
+            
+            // Mostrar panel derecho
+            if (statsSidebar) statsSidebar.style.display = "block";
+            
+            // Actualizar título
+            if (currentTabNameEl) {
+                if (tabId === "guardian") currentTabNameEl.textContent = "Guardian";
+                else if (tabId === "vanguardia") currentTabNameEl.textContent = "Vanguardia";
+                else if (tabId === "canon") currentTabNameEl.textContent = "Cañón";
+            }
+            
+            // Ocultar contenido "about" si está visible
+            const aboutContent = document.getElementById("about");
+            if (aboutContent) aboutContent.style.display = "none";
+            
+            // Re-inicializar el árbol
+            setTimeout(() => {
+                if (tabId === "guardian" || tabId === "vanguardia" || tabId === "canon") {
+                    initTree(tabId);
+                }
+            }, 50);
+        }
+        
+        // 6. Aplicar traducción si es necesario
         const currentLang = localStorage.getItem('tech-tree-language') || 'es';
         const texts = translations[currentLang] || translations.es;
-        if (tabId === "guardian") currentTabNameEl.textContent = texts["Guardian"];
-        else if (tabId === "vanguardia") currentTabNameEl.textContent = texts["Vanguardia"];
-        else currentTabNameEl.textContent = texts["Cañón"];
-
-        // Re-inicializar el árbol con las nuevas dimensiones
-        setTimeout(() => initTree(tabId), 50);
         
-        // Traducir nodos en la nueva pestaña
-        translateTreeNodes(tabId, texts);
+        if (currentTabNameEl) {
+            if (tabId === "about") {
+                currentTabNameEl.textContent = texts["Acerca de"];
+            } else {
+                const tabName = tabId === "guardian" ? "Guardian" : 
+                               tabId === "vanguardia" ? "Vanguardia" : "Cañón";
+                currentTabNameEl.textContent = texts[tabName] || tabName;
+            }
+        }
+        
+        // 7. También traducir nombres de nodos si no es "Acerca de"
+        if (tabId !== "about") {
+            translateTreeNodes(tabId, texts);
+        }
     });
 });
-
 // Redimensionamiento - COMPLETAMENTE RESPONSIVO
 let resizeTimeout;
 window.addEventListener('resize', () => {
