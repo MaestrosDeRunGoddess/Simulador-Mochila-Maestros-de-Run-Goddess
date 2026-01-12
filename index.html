@@ -239,6 +239,7 @@ align-items: center;
     border: 1px solid rgba(0, 255, 128, 0.4) !important;
     background: rgba(0, 255, 128, 0.08) !important;
 }
+
 /* Para móviles */
 @media (max-width: 768px) {
     .root-logo {
@@ -818,8 +819,8 @@ button:hover {
 <!-- CONTENEDOR CENTRADOR PARA PESTAÑAS -->
 <div style="width: 100%; text-align: center; margin: 15px 0;">
     <div class="tabs" style="display: inline-flex; justify-content: center;">
-        <button class="tab-button active" data-tab="guardian" data-i18n-key="Guardian">Guardian</button>
-        <button class="tab-button" data-tab="vanguardia" data-i18n-key="Vanguardia">Vanguardia</button>
+        <button class="tab-button" data-tab="guardian" data-i18n-key="Guardian">Guardian</button>
+        <button class="tab-button active" data-tab="vanguardia" data-i18n-key="Vanguardia">Vanguardia</button>
         <button class="tab-button" data-tab="canon" data-i18n-key="Cañón">Cañón</button>
         <button class="tab-button" data-tab="about" data-i18n-key="Acerca de">Acerca de</button>
     </div>
@@ -871,10 +872,10 @@ button:hover {
     <div class="tree-main-container" id="tree-container">
         <center><h3>Árbol de Habilidades - <span id="current-tab-name">Guardian</span></h3></center>
         <div class="tree-container-wrapper">
-            <div id="guardian" class="tab-content active">
+            <div id="guardian" class="tab-content">
                 <div class="tree-container" data-tree-id="guardian"></div>
             </div>
-            <div id="vanguardia" class="tab-content">
+            <div id="vanguardia" class="tab-content active">
                 <div class="tree-container" data-tree-id="vanguardia"></div>
             </div>
             <div id="canon" class="tab-content">
