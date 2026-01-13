@@ -288,12 +288,6 @@ align-items: center;
     border-color: #ffd700;
 }
 
-.root {
-    background: rgba(0, 255, 128, 0.25);
-    border-color: #00ff80;
-    cursor: default;
-}
-
 .node-level {
     font-size: 7px;
     margin-top: 1px;
@@ -695,44 +689,120 @@ button:hover {
     max-height: 80vh;
 }
 
-/* ESTILOS PARA EL CONTENIDO DE "ACERCA DE" */
-.about-content {
-    color: #eee;
-    line-height: 1.6;
+/* ============ ESTILOS PARA "ACERCA DE" ============ */
+#about {
+    width: 100%;
+    min-height: calc(100vh - 200px);
+    display: none; /* Oculto por defecto */
 }
 
-.about-content h2 {
+#about.active {
+    display: block; /* Mostrar cuando está activo */
+}
+
+.about-full-content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 20px;
+    color: #eee;
+}
+
+.about-full-content h2 {
     color: #1e90ff;
+    text-align: center;
+    margin-bottom: 30px;
     border-bottom: 1px solid #333;
-    padding-bottom: 10px;
+    padding-bottom: 15px;
+    font-size: 1.8rem;
+}
+
+.about-section {
+    background: rgba(20, 25, 45, 0.5);
+    padding: 20px;
+    border-radius: 8px;
     margin-bottom: 20px;
 }
 
-.about-content h3 {
+.about-section.creator {
+    border-left: 4px solid #1e90ff;
+}
+
+.about-section.instructions {
+    border-left: 4px solid #00ce9d;
+}
+
+.about-section.technical {
+    border-left: 4px solid #ff8c00;
+}
+
+.about-section.footer {
+    border-left: 4px solid #9d4edd;
+    text-align: center;
+    font-size: 14px;
+    color: #aaa;
+    padding: 15px;
+}
+
+.about-section h3 {
     color: #ffd700;
-    margin: 20px 0 10px 0;
-}
-
-.about-content p {
-    margin-bottom: 10px;
-}
-
-.about-content ul {
-    padding-left: 20px;
     margin-bottom: 15px;
+    font-size: 1.2rem;
 }
 
-.about-content li {
-    margin-bottom: 5px;
+.about-section p {
+    margin-bottom: 8px;
+    line-height: 1.5;
 }
 
-.about-content a {
+.about-section ul {
+    padding-left: 20px;
+    margin-bottom: 0;
+}
+
+.about-section li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.about-section a {
     color: #1e90ff;
     text-decoration: none;
 }
 
-.about-content a:hover {
+.about-section a:hover {
     text-decoration: underline;
+}
+
+.green { color: #00ff00; font-weight: bold; }
+.red { color: #ff0000; font-weight: bold; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .about-full-content {
+        padding: 20px 15px;
+    }
+    
+    .about-full-content h2 {
+        font-size: 1.5rem;
+    }
+    
+    .about-section {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-full-content {
+        padding: 15px 10px;
+    }
+    
+    .about-full-content h2 {
+        font-size: 1.3rem;
+    }
+    
+    .about-section h3 {
+        font-size: 1.1rem;
+    }
 }
 /* ============= LOGO EN NODO RAÍZ ============= */
 .root {
@@ -747,13 +817,6 @@ button:hover {
     display: flex;
     justify-content: center;
     align-items: center;
-}
-
-.root-logo {
-    width: 80%;
-    height: 80%;
-    object-fit: contain;
-    border-radius: 50%;
 }
 
 .root-logo-fallback {
@@ -789,6 +852,7 @@ button:hover {
         font-size: 16px;
     }
 }
+
 </style>
 </head>
 
@@ -826,40 +890,38 @@ button:hover {
     </div>
 </div>
 <div id="about" class="tab-content">
-    <div style="padding: 20px; max-width: 800px; margin: 0 auto; color: #eee;">
-        <!-- Contenido de la pestaña Acerca de -->
-        <h2 style="color: #1e90ff; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px;">
-            Simulador Mochila - Maestros de Run Goddess
-        </h2>
+    <!-- CONTENIDO PRINCIPAL DE "ACERCA DE" -->
+    <div class="about-full-content">
+        <h2>Simulador Mochila - Maestros de Run Goddess</h2>
         
-        <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #1e90ff; margin-bottom: 20px;">
-            <h3 style="color: #ffd700; margin-bottom: 15px;">👨‍💻 Creador</h3>
+        <div class="about-section creator">
+            <h3>👨‍💻 Creador</h3>
             <p><strong>Nombre:</strong> Diabolikzx</p>
             <p><strong>Contacto:</strong> Maestros de Run Goddess</p>
-            <p><strong>Facebook:</strong> <a href="https://www.facebook.com/share/18LCK14qsu/" target="_blank" style="color: #1e90ff; text-decoration: none;">Maestros de Run Goddess</a></p>
+            <p><strong>Facebook:</strong> <a href="https://www.facebook.com/share/18LCK14qsu/" target="_blank">Maestros de Run Goddess</a></p>
         </div>
         
-        <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #00ce9d; margin-bottom: 20px;">
-            <h3 style="color: #ffd700; margin-bottom: 15px;">📖 Instrucciones Rápidas</h3>
-            <ul style="padding-left: 20px;">
+        <div class="about-section instructions">
+            <h3>📖 Instrucciones Rápidas</h3>
+            <ul>
                 <li>Usa <strong>clic o toca</strong> para subir un nivel o extenderte hasta un nodo</li>
                 <li>Usa <strong>clic sostenido</strong> para bajar niveles</li>
                 <li><strong>Doble clic</strong> sube al siguiente hito (nivel 20, 40, 60, etc.)</li>
-                <li>Los nodos en <span style="color: #00ff00">verde</span> están optimizados</li>
-                <li>Los nodos en <span style="color: #ff0000">rojo</span> necesitan atención</li>
+                <li>Los nodos en <span class="green">verde</span> están optimizados</li>
+                <li>Los nodos en <span class="red">rojo</span> necesitan atención</li>
                 <li>Puedes guardar builds y cargarlas después</li>
             </ul>
         </div>
         
-        <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #ff8c00; margin-bottom: 20px;">
-            <h3 style="color: #ffd700; margin-bottom: 15px;">⚙️ Información Técnica</h3>
+        <div class="about-section technical">
+            <h3>⚙️ Información Técnica</h3>
             <p><strong>Versión:</strong> 2.0</p>
             <p><strong>Última actualización:</strong> 11 de enero de 2025</p>
             <p><strong>Idiomas disponibles:</strong> Español, Inglés, Francés, Alemán, Portugués, Chino</p>
             <p><strong>Compatibilidad:</strong> Desktop y móvil</p>
         </div>
         
-        <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #9d4edd; text-align: center; font-size: 14px; color: #aaa;">
+        <div class="about-section footer">
             <p>Este simulador fue creado para la comunidad de <strong>Maestros de Run Goddess</strong></p>
             <p>¡Disfruta optimizando tus builds! 🎮</p>
         </div>
@@ -881,46 +943,7 @@ button:hover {
             <div id="canon" class="tab-content">
                 <div class="tree-container" data-tree-id="canon"></div>
             </div>
-            <div id="about" class="tab-content">
-                <!-- CONTENIDO DE "ACERCA DE" OCUPANDO TODO EL ESPACIO -->
-                <div style="padding: 30px; color: #eee; width: 100%; height: 100%; overflow-y: auto;">
-                    <h2 style="color: #1e90ff; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px;">
-                        Simulador Mochila - Maestros de Run Goddess
-                    </h2>
-                    
-                    <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #1e90ff; margin-bottom: 20px;">
-                        <h3 style="color: #ffd700; margin-bottom: 15px;">👨‍💻 Creador</h3>
-                        <p><strong>Nombre:</strong> [Tu nombre aquí]</p>
-                        <p><strong>Contacto:</strong> [Tu correo o enlace de contacto]</p>
-                        <p><strong>Facebook:</strong> <a href="[TU_ENLACE_DE_FACEBOOK]" target="_blank" style="color: #1e90ff; text-decoration: none;">[Tu página de Facebook]</a></p>
-                    </div>
-                    
-                    <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #00ce9d; margin-bottom: 20px;">
-                        <h3 style="color: #ffd700; margin-bottom: 15px;">📖 Instrucciones Rápidas</h3>
-                        <ul style="padding-left: 20px;">
-                            <li>Usa <strong>clic</strong> para subir un nivel</li>
-                            <li>Usa <strong>clic sostenido</strong> para bajar niveles</li>
-                            <li><strong>Doble clic</strong> sube al siguiente hito (nivel 20, 40, 60, etc.)</li>
-                            <li>Los nodos en <span style="color: #00ff00">verde</span> están optimizados</li>
-                            <li>Los nodos en <span style="color: #ff0000">rojo</span> necesitan atención</li>
-                            <li>Puedes guardar builds con el sistema de la derecha</li>
-                        </ul>
-                    </div>
-                    
-                    <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #ff8c00; margin-bottom: 20px;">
-                        <h3 style="color: #ffd700; margin-bottom: 15px;">⚙️ Información Técnica</h3>
-                        <p><strong>Versión:</strong> 2.0</p>
-                        <p><strong>Última actualización:</strong> [Fecha de hoy]</p>
-                        <p><strong>Idiomas disponibles:</strong> Español, Inglés, Francés, Alemán, Portugués, Chino</p>
-                        <p><strong>Compatibilidad:</strong> Desktop y móvil</p>
-                    </div>
-                    
-                    <div style="background: rgba(20, 25, 45, 0.5); padding: 20px; border-radius: 8px; border-left: 4px solid #9d4edd; text-align: center; font-size: 14px; color: #aaa;">
-                        <p>Este simulador fue creado para la comunidad de <strong>Maestros de Run Goddess</strong></p>
-                        <p>¡Disfruta optimizando tus builds! 🎮</p>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
 
@@ -2220,6 +2243,27 @@ function updateSpecificStatsDisplay() {
         specificStatsGrid.appendChild(div);
     });
 }
+
+// ======================== FUNCIONES DE ACTUALIZACIÓN MASIVA ========================
+
+function updateAllNodesVisualState(treeId) {
+    const state = treesState[treeId];
+    if (!state || !state.levels) return;
+    
+    Object.keys(state.levels).forEach(nodeId => {
+        updateNodeVisualState(treeId, nodeId);
+    });
+}
+
+function updateNodeDisplaysForTree(treeId) {
+    const state = treesState[treeId];
+    if (!state || !state.levels) return;
+    
+    Object.keys(state.levels).forEach(nodeId => {
+        updateNodeDisplay(treeId, nodeId);
+    });
+}
+
 function createSpecificStatElement(key, stat) {
     const div = document.createElement("div");
     div.className = "specific-stat-item";
@@ -2250,39 +2294,43 @@ function createSpecificStatElement(key, stat) {
     return div;  
 }
 
-function updateGlobalStats() {  
+function updateGlobalStats() {
     // Obtener idioma actual
     const currentLang = localStorage.getItem('tech-tree-language') || 'es';
     
-    let totalLevels = 0;  
-    let totalFinalNodes = 0;  
-    let completedBranches = 0;  
+    let totalLevels = 0;
+    let totalFinalNodes = 0;
+    let completedBranches = 0;
+    let calculatedPointsSpent = 0; // <- NUEVA VARIABLE
 
     // Resetear todos los stats
-    Object.keys(specificStats).forEach(key => {  
-        specificStats[key].total = 0;  
+    Object.keys(specificStats).forEach(key => {
+        specificStats[key].total = 0;
     });
 
-    Object.keys(treesState).forEach(treeId => {  
-        const state = treesState[treeId];  
-        Object.keys(state.levels).forEach(nodeId => {  
-            const cfg = getNodeConfig(nodeId);  
-            if (!cfg) return;  
+    Object.keys(treesState).forEach(treeId => {
+        const state = treesState[treeId];
+        Object.keys(state.levels).forEach(nodeId => {
+            const cfg = getNodeConfig(nodeId);
+            if (!cfg) return;
 
-            const current = state.levels[nodeId].current;  
-            totalLevels += current;  
+            const current = state.levels[nodeId].current;
+            totalLevels += current;
+            
+            // ¡CALCULAR PUNTOS GASTADOS EN ESTE NODO!
+            calculatedPointsSpent += calculateTotalSpentOnNode(nodeId, current);
 
-            const statInfo = getStatinfoForNode(treeId, nodeId, current);  
-            if (statInfo && statInfo.stat) {  
-                const statKey = statInfo.stat.toLowerCase();  
-                if (specificStats[statKey]) {  
-                    if (statKey === "daño final") {  
-                        specificStats[statKey].total += current;  
-                    } else {  
-                        specificStats[statKey].total += statInfo.value;  
-                    }  
-                } else {  
-                    console.warn(`Stat no encontrado en specificStats: "${statKey}" para nodo ${nodeId}`);  
+            const statInfo = getStatinfoForNode(treeId, nodeId, current);
+            if (statInfo && statInfo.stat) {
+                const statKey = statInfo.stat.toLowerCase();
+                if (specificStats[statKey]) {
+                    if (statKey === "daño final") {
+                        specificStats[statKey].total += current;
+                    } else {
+                        specificStats[statKey].total += statInfo.value;
+                    }
+                } else {
+                    console.warn(`Stat no encontrado en specificStats: "${statKey}" para nodo ${nodeId}`);
                 }
             }
 
@@ -2299,6 +2347,10 @@ function updateGlobalStats() {
         });
     });
 
+    // ACTUALIZAR VARIABLE GLOBAL
+    totalPointsSpent = calculatedPointsSpent;
+
+    // ACTUALIZAR INTERFAZ
     totalLevelsEl.textContent = totalLevels;
     totalPointsSpentEl.textContent = totalPointsSpent;
     totalFinalNodesEl.textContent = `${totalFinalNodes}/3`;
@@ -2830,61 +2882,235 @@ function getNodeElement(treeId, nodeId) {
     );
 }
 
-// ===== FUNCIÓN DE COSTOS ACTUALIZADA =====
+// ===== FUNCIÓN DE COSTOS CON PATRÓN DE UMBRALES =====
 function calculateCurrentCost(nodeId, currentLevel) {
     const cfg = getNodeConfig(nodeId);
     if (!cfg) return 0;
     
-    let cost = 0;
+    // Función auxiliar para costos con umbrales
+    function calculateWithThresholds(baseCost, currentLvl) {
+        // Costo base sin ajustes
+        const rawCost = baseCost + currentLvl;
+        
+        // Umbral inicial depende del costo base
+        // Main/sec (base=5): umbrales en 25, 45, 65, 85...
+        // Tertiary (base=20): umbrales en 40, 60, 80, 100...
+        const firstThreshold = baseCost === 5 ? 25 : 40;
+        const thresholdStep = 20;
+        
+        // Calcular cuántos umbrales hemos superado
+        let extra = 0;
+        for (let threshold = firstThreshold; rawCost >= threshold; threshold += thresholdStep) {
+            extra += 1;
+        }
+        
+        return rawCost + extra;
+    }
     
     switch(cfg.type) {
         case "main":       // Nodos primarios (max: 100)
-            // Empieza en 5, aumenta +1 por nivel
-            // Nivel 1: 5, Nivel 2: 6, ..., Nivel 100: 104
-            cost = 5 + currentLevel;
-            break;
-            
         case "secondary":  // Nodos secundarios (max: 100)
-            // Empieza en 5, aumenta +1 por nivel
-            cost = 5 + currentLevel;
-            break;
+            // Base 5, aumenta +1, pero cuando costo alcanza 25→+2, 45→+3, etc.
+            return calculateWithThresholds(5, currentLevel);
             
         case "tertiary":   // Nodos terciarios (max: 100)
-            // Empieza en 20, aumenta +1 por nivel
-            cost = 20 + currentLevel;
-            break;
+            // Base 20, aumenta +1, pero cuando costo alcanza 40→+2, 60→+3, etc.
+            return calculateWithThresholds(20, currentLevel);
             
         case "mid":        // Nodos medios (max: 50)
-            // Fórmula cuadrática: 138 + 11.5*nivel + 0.5*nivel²
-            if (currentLevel === 0) {
-                cost = 0;
-            } else if (currentLevel >= 1 && currentLevel <= 50) {
-                cost = Math.round(138 + 11.5 * currentLevel + 0.5 * currentLevel * currentLevel);
+            if (currentLevel <= 0) return 0;
+            
+            // TABLA EXACTA de costos ACUMULADOS (tus datos)
+            const midExactCosts = [
+                0,    // nivel 0
+                150,  // nivel 1
+                163,  // nivel 2
+                177,  // nivel 3
+                192,  // nivel 4
+                209,  // nivel 5
+                227,  // nivel 6
+                247,  // nivel 7
+                269,  // nivel 8
+                293,  // nivel 9
+                319,  // nivel 10
+                347,  // nivel 11
+                378,  // nivel 12
+                412,  // nivel 13
+                449,  // nivel 14
+                488,  // nivel 15
+                533,  // nivel 16
+                580,  // nivel 17
+                632,  // nivel 18
+                688,  // nivel 19
+                749   // nivel 20
+            ];
+            
+            // 1. Si está en la tabla exacta (niveles 0-20)
+            if (currentLevel < midExactCosts.length) {
+                return midExactCosts[currentLevel];
             }
-            break;
+            
+            // 2. Para niveles > 20, extrapolar manteniendo patrón de rangos
+            // Último dato conocido: nivel 20 = 749, último incremento = 61
+            let cost = 749;
+            let increment = 61;
+            let currentLvl = 20;
+            
+            // Calcular hasta el nivel deseado
+            while (currentLvl < currentLevel) {
+                currentLvl++;
+                
+                // Cada 5 niveles, recalcular incremento base
+                if ((currentLvl - 1) % 5 === 0) {
+                    // Nuevo rango: incremento base aumenta ~50%
+                    increment = Math.round(increment * 1.5);
+                } else {
+                    // Dentro del mismo rango, el incremento aumenta
+                    const posInRange = (currentLvl - 1) % 5;
+                    increment += Math.round(5 + posInRange * 0.5);
+                }
+                
+                cost += increment;
+            }
+            
+            return cost;
             
         case "final":      // Nodo final (max: 1)
-            // Costo fijo (usa el baseCost definido en el nodo, que es 1000 según tu código)
-            cost = cfg.baseCost;
-            break;
+            // Costo fijo: 1000 si se obtiene, 0 si no
+            return currentLevel >= 1 ? cfg.baseCost : 0;
             
         case "root":       // Nodo raíz
-            cost = 0;
-            break;
+            return 0;
             
         default:
-            cost = cfg.baseCost || 0;
+            return cfg.baseCost || 0;
     }
-    
-    return cost;
 }
 
 function calculateTotalSpentOnNode(nodeId, currentLevel) {
-    let total = 0;
-    for (let i = 0; i < currentLevel; i++) {
-        total += calculateCurrentCost(nodeId, i);
+    if (currentLevel <= 0) return 0;
+    
+    const cfg = getNodeConfig(nodeId);
+    if (!cfg) return 0;
+    
+    // ========== PARA NODOS MID ==========
+    if (cfg.type === "mid") {
+        // Tabla de SUMAS ACUMULADAS REALES para mids
+        // (suma de todos los costos por nivel hasta ese nivel)
+        const midAccumulatedSums = [
+            0,      // nivel 0: 0
+            150,    // nivel 1: 150
+            313,    // nivel 2: 150+163
+            490,    // nivel 3: 313+177
+            682,    // nivel 4: 490+192
+            891,    // nivel 5: 682+209
+            1118,   // nivel 6: 891+227
+            1365,   // nivel 7: 1118+247
+            1634,   // nivel 8: 1365+269
+            1927,   // nivel 9: 1634+293
+            2246,   // nivel 10: 1927+319
+            2593,   // nivel 11: 2246+347
+            2971,   // nivel 12: 2593+378
+            3383,   // nivel 13: 2971+412
+            3832,   // nivel 14: 3383+449
+            4320,   // nivel 15: 3832+488
+            4853,   // nivel 16: 4320+533
+            5433,   // nivel 17: 4853+580
+            6065,   // nivel 18: 5433+632
+            6753,   // nivel 19: 6065+688
+            7502    // nivel 20: 6753+749
+        ];
+        
+        // Para niveles 0-20: usar tabla exacta
+        if (currentLevel <= 20) {
+            return midAccumulatedSums[currentLevel];
+        }
+        
+        // Para niveles > 20, calcular suma acumulada
+        // Último dato conocido: nivel 20 = 7502
+        let total = 7502;
+        let currentCost = 749; // Costo del nivel 20
+        let increment = 61; // Incremento de 19→20
+        
+        // Calcular desde nivel 21 hasta currentLevel
+        for (let lvl = 21; lvl <= currentLevel; lvl++) {
+            // Cada 5 niveles, recalcular incremento base
+            if ((lvl - 1) % 5 === 0) {
+                increment = Math.round(increment * 1.5);
+            } else {
+                const posInRange = (lvl - 1) % 5;
+                increment += Math.round(5 + posInRange * 0.5);
+            }
+            
+            currentCost += increment;
+            total += currentCost;
+        }
+        
+        return total;
     }
-    return total;
+    
+    // ========== PARA MAIN Y SECONDARY ==========
+    if (cfg.type === "main" || cfg.type === "secondary") {
+        // Base 5, aumenta +1 por nivel, con umbrales en 25, 45, 65...
+        // Necesitamos calcular suma acumulada de costos por nivel
+        
+        let total = 0;
+        for (let lvl = 1; lvl <= currentLevel; lvl++) {
+            // Calcular costo para subir a este nivel (lvl-1 → lvl)
+            const baseCost = 5 + (lvl - 1);
+            
+            // Aplicar umbrales
+            let extra = 0;
+            if (baseCost >= 25) extra += 1;  // Umbral 25: +2
+            if (baseCost >= 45) extra += 1;  // Umbral 45: +3
+            if (baseCost >= 65) extra += 1;  // Umbral 65: +4
+            if (baseCost >= 85) extra += 1;  // Umbral 85: +5
+            if (baseCost >= 105) extra += 1; // Umbral 105: +6
+            if (baseCost >= 125) extra += 1; // Umbral 125: +7
+            if (baseCost >= 145) extra += 1; // Umbral 145: +8
+            
+            total += baseCost + extra;
+        }
+        
+        return total;
+    }
+    
+    // ========== PARA TERCIAIOS ==========
+    if (cfg.type === "tertiary") {
+        // Base 20, aumenta +1 por nivel, con umbrales en 40, 60, 80...
+        
+        let total = 0;
+        for (let lvl = 1; lvl <= currentLevel; lvl++) {
+            // Calcular costo para subir a este nivel (lvl-1 → lvl)
+            const baseCost = 20 + (lvl - 1);
+            
+            // Aplicar umbrales
+            let extra = 0;
+            if (baseCost >= 40) extra += 1;  // Umbral 40: +2
+            if (baseCost >= 60) extra += 1;  // Umbral 60: +3
+            if (baseCost >= 80) extra += 1;  // Umbral 80: +4
+            if (baseCost >= 100) extra += 1; // Umbral 100: +5
+            if (baseCost >= 120) extra += 1; // Umbral 120: +6
+            
+            total += baseCost + extra;
+        }
+        
+        return total;
+    }
+    
+    // ========== PARA FINAL ==========
+    if (cfg.type === "final") {
+        // Costo fijo: 1000 si se tiene el nodo
+        return currentLevel >= 1 ? cfg.baseCost : 0;
+    }
+    
+    // ========== PARA ROOT Y OTROS ==========
+    if (cfg.type === "root") {
+        return 0;
+    }
+    
+    // Para cualquier otro tipo (por si acaso)
+    return cfg.baseCost ? cfg.baseCost * currentLevel : 0;
 }
 // ======================== SUBIR NODO A NIVEL ESPECÍFICO ===========================
 
@@ -3304,13 +3530,21 @@ function performSingleUpgrade(treeId, nodeId) {
     
     if (!cfg || !lvl) return false;
     
-    const currentCost = calculateCurrentCost(nodeId, lvl.current);
-    
-    // Verificar puntos
-    if (techPoints < currentCost) {
-        setLog(`Necesitas ${currentCost} puntos de tecnologia.`);
-        return false;
-    }
+
+// Calcular costo para subir de nivel 'current' a 'current+1'
+
+const costCurrent = calculateCurrentCost(nodeId, lvl.current);
+const costNext = calculateCurrentCost(nodeId, lvl.current + 1);
+const upgradeCost = costNext - costCurrent;
+
+// Luego usar 'upgradeCost' en lugar de 'currentCost':
+if (techPoints < upgradeCost) {
+    setLog(`Necesitas ${upgradeCost} puntos de tecnologia.`);
+    return false;
+}
+
+techPoints -= upgradeCost;
+totalPointsSpent += upgradeCost;
     
     // Verificar si es final y hay puntos disponibles
     if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
@@ -3332,8 +3566,8 @@ function performSingleUpgrade(treeId, nodeId) {
     }
     
     // Aplicar upgrade
-    techPoints -= currentCost;
-    totalPointsSpent += currentCost;
+    techPoints -= upgradeCost;
+    totalPointsSpent += upgradeCost;
     
     if (cfg.type === "final") {
         globalFinalPointsLeft -= 1;
@@ -3381,8 +3615,11 @@ function performSingleDowngrade(treeId, nodeId) {
     const lvl = state.levels[nodeId];
     
     if (!lvl || lvl.current <= 0) return false;
-    
-    const refundAmount = calculateCurrentCost(nodeId, lvl.current - 1);
+
+// REEMPLAZAR CON:
+const costCurrent = calculateCurrentCost(nodeId, lvl.current);
+const costPrev = calculateCurrentCost(nodeId, lvl.current - 1);
+const refundAmount = costCurrent - costPrev;
     
     // Aplicar refund
     techPoints += refundAmount;
@@ -3704,10 +3941,11 @@ function initTree(treeId) {
 
         container.appendChild(nodeElem);
 
-        // INICIALIZAR ESTADO
-        if (!state.levels[cfg.id]) {
-            state.levels[cfg.id] = { current: 0, max: cfg.max };
-        }
+        // INICIALIZAR ESTADO (NO sobreescribir si ya existe)
+if (!state.levels[cfg.id]) {
+    // Solo crear si no existe, preservar datos existentes
+    state.levels[cfg.id] = state.levels[cfg.id] || { current: 0, max: cfg.max };
+}
     });
     // ============= FIN CREAR NODOS =============
 
@@ -3773,6 +4011,8 @@ function updateNodeDisplay(treeId, nodeId) {
 
 function resetAll() {
     let totalRefund = 0;
+    
+    // 1. Calcular reembolso total
     Object.keys(treesState).forEach(treeId => {
         const state = treesState[treeId];
         Object.keys(state.levels).forEach(nodeId => {
@@ -3787,18 +4027,36 @@ function resetAll() {
         });
     });
 
+    // 2. Resetear recursos
     techPoints = 9999999 + totalRefund;
     globalFinalPointsLeft = 3;
     totalPointsSpent = 0;
-    updateGlobalUI();
 
+    // 3. Resetear TODOS los estados de árboles
     Object.keys(treesState).forEach(treeId => {
         treesState[treeId].levels = {};
         treesState[treeId].lockedBranch = null;
         treesState[treeId].unlockedNodes = new Set();
+    });
+
+    // 4. Re-inicializar TODOS los árboles
+    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
         initTree(treeId);
     });
 
+    // 5. ACTUALIZACIÓN CRÍTICA: Forzar actualización visual completa
+    updateGlobalUI(); // ← Esto actualiza puntos y stats globales
+    
+    // 6. Actualizar estadísticas específicas también
+    updateSpecificStatsDisplay();
+    
+    // 7. Actualizar estado visual de todos los nodos
+    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+        updateAllNodesVisualState(treeId);
+        refreshAllowedDisplays(treeId);
+    });
+
+    // 8. Log
     setLog(`Todo reiniciado. +${totalRefund} pts recuperados.`);
 }
 
@@ -3824,12 +4082,20 @@ function resetCurrentTab() {
     techPoints += totalRefund;
     totalPointsSpent = Math.max(0, totalPointsSpent - totalRefund);
 
+    // Resetear ESTE árbol específico
     state.levels = {};
     state.lockedBranch = null;
     state.unlockedNodes = new Set();
+    
+    // Re-inicializar solo este árbol
     initTree(tabId);
+    
+    // ACTUALIZACIONES CRÍTICAS:
+    updateGlobalUI(); // ← Esto es lo que falta
+    refreshAllowedDisplays(tabId);
+    updateAllNodesVisualState(tabId);
+    updateSpecificStatsDisplay();
 
-    updateGlobalUI();
     setLog(`Pestaña ${tabId} reiniciada. +${totalRefund} pts.`);
 }
 
@@ -3889,7 +4155,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
         document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         
-        // 2. Ocultar todos los contenidos primero
+        // 2. Ocultar todos los contenidos de pestañas
         document.querySelectorAll(".tab-content").forEach(c => {
             c.classList.remove("active");
         });
@@ -3902,54 +4168,43 @@ document.querySelectorAll(".tab-button").forEach(btn => {
         
         // 4. Obtener elementos del DOM
         const currentTabNameEl = document.getElementById("current-tab-name");
-        const statsSidebar = document.getElementById("stats-sidebar");
-        const treeContainer = document.getElementById("tree-container");
+        const mainLayout = document.querySelector(".main-layout");
+        const aboutTab = document.getElementById("about");
         
         // 5. Manejar "Acerca de" vs otras pestañas
         if (tabId === "about") {
-            // En "Acerca de": OCULTAR TODO el contenedor del árbol y mostrar solo el contenido
-            if (treeContainer) treeContainer.style.display = "none";
-            if (statsSidebar) statsSidebar.style.display = "none";
+            // En "Acerca de": OCULTAR el layout principal, MOSTRAR about
+            if (mainLayout) mainLayout.style.display = "none";
+            if (aboutTab) aboutTab.style.display = "block";
             if (currentTabNameEl) currentTabNameEl.textContent = "Acerca de";
-            
-            // Asegurarse de que el contenido "about" sea visible
-            const aboutContent = document.getElementById("about");
-            if (aboutContent) {
-                aboutContent.style.display = "block";
-            }
         } else {
-            // Para las otras pestañas: MOSTRAR el contenedor del árbol
-            if (treeContainer) {
-                treeContainer.style.display = "flex";
-                treeContainer.style.flex = "7";
-            }
+            // Para árboles: MOSTRAR layout principal, OCULTAR about
+            if (mainLayout) mainLayout.style.display = "flex";
+            if (aboutTab) aboutTab.style.display = "none";
             
-            // Mostrar panel derecho
-            if (statsSidebar) statsSidebar.style.display = "block";
-            
-            // Actualizar título
+            // Actualizar título del árbol
             if (currentTabNameEl) {
                 if (tabId === "guardian") currentTabNameEl.textContent = "Guardian";
                 else if (tabId === "vanguardia") currentTabNameEl.textContent = "Vanguardia";
                 else if (tabId === "canon") currentTabNameEl.textContent = "Cañón";
             }
             
-            // Ocultar contenido "about" si está visible
-            const aboutContent = document.getElementById("about");
-            if (aboutContent) aboutContent.style.display = "none";
-            
-            // Re-inicializar el árbol
+            // Re-inicializar el árbol (con retraso para asegurar renderizado)
             setTimeout(() => {
                 if (tabId === "guardian" || tabId === "vanguardia" || tabId === "canon") {
                     initTree(tabId);
+                    refreshAllowedDisplays(tabId);
+                    updateAllNodesVisualState(tabId);
+                    updateNodeDisplaysForTree(tabId);
                 }
             }, 50);
         }
         
-        // 6. Aplicar traducción si es necesario
+        // 6. Aplicar traducción
         const currentLang = localStorage.getItem('tech-tree-language') || 'es';
         const texts = translations[currentLang] || translations.es;
         
+        // Actualizar título de pestaña
         if (currentTabNameEl) {
             if (tabId === "about") {
                 currentTabNameEl.textContent = texts["Acerca de"];
@@ -3960,7 +4215,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
             }
         }
         
-        // 7. También traducir nombres de nodos si no es "Acerca de"
+        // 7. Traducir nombres de nodos si es un árbol
         if (tabId !== "about") {
             translateTreeNodes(tabId, texts);
         }
@@ -4144,25 +4399,60 @@ function initBuildSystem() {
         buildsList.appendChild(footer);
     }
     
-    // Botón GUARDAR
-    saveBtn.addEventListener('click', () => {
-        const buildName = buildNameInput.value.trim();
-        if (!buildName) {
-            setLog('Escribe un nombre para la build.');
-            buildNameInput.focus();
-            return;
+    // Botón GUARDAR (con mejor feedback)
+saveBtn.addEventListener('click', () => {
+    const buildName = buildNameInput.value.trim();
+    if (!buildName) {
+        setLog('❌ Escribe un nombre para la build.');
+        buildNameInput.focus();
+        buildNameInput.style.borderColor = '#ff4757';
+        setTimeout(() => buildNameInput.style.borderColor = '', 1000);
+        return;
+    }
+    
+    // Verificar si ya existe
+    const existingBuilds = getSavedBuilds();
+    const alreadyExists = existingBuilds.some(b => b.name === buildName);
+    
+    if (alreadyExists && !confirm(`La build "${buildName}" ya existe. ¿Sobreescribir?`)) {
+        return;
+    }
+    
+    console.log(`💾 Guardando build "${buildName}"...`);
+    
+    if (saveBuild(buildName)) {
+        // Feedback visual
+        saveBtn.innerHTML = '✅ Guardado!';
+        saveBtn.style.background = '#00ce9d';
+        buildNameInput.style.borderColor = '#00ce9d';
+        
+        setLog(`✅ Build "${buildName}" ${alreadyExists ? 'actualizada' : 'guardada'}.`);
+        buildNameInput.value = '';
+        
+        // Actualizar lista si está visible
+        if (isBuildsListVisible) {
+            updateBuildsList();
         }
         
-        if (saveBuild(buildName)) {
-            setLog(`Build "${buildName}" guardada.`);
-            buildNameInput.value = '';
-            
-            // Si la lista está visible, actualizarla
-            if (isBuildsListVisible) {
-                updateBuildsList();
-            }
-        }
-    });
+        // Restaurar botón después de 1.5 segundos
+        setTimeout(() => {
+            saveBtn.innerHTML = '💾 Guardar';
+            saveBtn.style.background = '';
+            buildNameInput.style.borderColor = '';
+        }, 1500);
+        
+        // Diagnóstico rápido
+        console.log(`✅ Build guardada exitosamente. Total builds: ${getSavedBuilds().length}`);
+    } else {
+        setLog('❌ Error al guardar la build.');
+        saveBtn.innerHTML = '❌ Error!';
+        saveBtn.style.background = '#ff4757';
+        setTimeout(() => {
+            saveBtn.innerHTML = '💾 Guardar';
+            saveBtn.style.background = '';
+        }, 2000);
+    }
+});
     
     // También permitir guardar con Enter
     buildNameInput.addEventListener('keypress', (e) => {
@@ -4310,90 +4600,342 @@ function saveBuild(buildName) {
     }
 }
 
-// Cargar una build
-// Cargar una build (VERSIÓN MEJORADA CON ACTUALIZACIÓN VISUAL)
+// Cargar una build (VERSIÓN CORREGIDA - ORDEN CORRECTO)
 function loadBuild(buildName) {
     try {
+        console.log(`📂 Cargando build "${buildName}"...`);
+        
         const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
         if (!savedData) {
             setLog(`Build "${buildName}" no encontrada.`);
+            console.error("❌ Build no encontrada en localStorage");
             return false;
         }
         
         const buildData = JSON.parse(savedData);
+        console.log("✅ Datos parseados:", Object.keys(buildData));
         
         // CORRECCIÓN: Convertir unlockedNodes de Array a Set
         function fixUnlockedNodes(state) {
-            if (state.unlockedNodes && Array.isArray(state.unlockedNodes)) {
-                state.unlockedNodes = new Set(state.unlockedNodes);
-            } else if (!state.unlockedNodes) {
-                state.unlockedNodes = new Set();
+            if (!state) return { levels: {}, lockedBranch: null, unlockedNodes: new Set() };
+            
+            const fixedState = {
+                levels: state.levels || {},
+                lockedBranch: state.lockedBranch || null,
+                unlockedNodes: new Set()
+            };
+            
+            if (state.unlockedNodes) {
+                if (Array.isArray(state.unlockedNodes)) {
+                    fixedState.unlockedNodes = new Set(state.unlockedNodes);
+                } else if (state.unlockedNodes instanceof Set) {
+                    fixedState.unlockedNodes = state.unlockedNodes;
+                }
             }
-            return state;
+            
+            return fixedState;
         }
         
-        // Restaurar estado de los árboles (CON CORRECCIÓN)
-        treesState.guardian = fixUnlockedNodes(buildData.guardian || { levels: {}, lockedBranch: null, unlockedNodes: new Set() });
-        treesState.vanguardia = fixUnlockedNodes(buildData.vanguardia || { levels: {}, lockedBranch: null, unlockedNodes: new Set() });
-        treesState.canon = fixUnlockedNodes(buildData.canon || { levels: {}, lockedBranch: null, unlockedNodes: new Set() });
+        // 1. RESTAURAR DATOS PRIMERO
+        console.log("1. Restaurando datos de árboles...");
+        treesState.guardian = fixUnlockedNodes(buildData.guardian);
+        treesState.vanguardia = fixUnlockedNodes(buildData.vanguardia);
+        treesState.canon = fixUnlockedNodes(buildData.canon);
         
-        // Asegurar que levels exista
-        treesState.guardian.levels = treesState.guardian.levels || {};
-        treesState.vanguardia.levels = treesState.vanguardia.levels || {};
-        treesState.canon.levels = treesState.canon.levels || {};
-        
-        // Restaurar recursos
+        // 2. RESTAURAR RECURSOS GLOBALES
+        console.log("2. Restaurando recursos...");
         techPoints = buildData.techPoints !== undefined ? buildData.techPoints : 9999999;
         globalFinalPointsLeft = buildData.globalFinalPointsLeft !== undefined ? buildData.globalFinalPointsLeft : 3;
         totalPointsSpent = buildData.totalPointsSpent || 0;
         
-        // ACTUALIZACIÓN CRÍTICA: Forzar actualización visual de CADA NODO
-        function updateAllNodesVisuals() {
-            ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
-                const state = treesState[treeId];
-                
-                // Para cada nodo en este árbol
-                Object.keys(state.levels).forEach(nodeId => {
-                    // Actualizar display del nodo
-                    updateNodeDisplay(treeId, nodeId);
-                    
-                    // Actualizar estado visual (colores)
-                    updateNodeVisualState(treeId, nodeId);
-                });
-            });
-        }
+        console.log(`   • Tech points: ${techPoints}`);
+        console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
+        console.log(`   • Puntos gastados: ${totalPointsSpent}`);
         
-        // Actualizar UI global primero
-        updateGlobalUI();
-        
-        // Re-inicializar todos los árboles (esto recrea la estructura)
+        // 3. RE-CREAR VISUALES DE ÁRBOLES (sin resetear datos)
+        console.log("3. Recreando árboles visualmente...");
         ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
-            initTree(treeId);
+            reinitTreePreservingData(treeId);
         });
         
-        // ACTUALIZACIÓN EXTRA: Forzar refresh de allowed displays
+        // 4. ACTUALIZAR UI GLOBAL (DESPUÉS de tener datos)
+        console.log("4. Actualizando UI global...");
+        updateGlobalUI();
+        
+        // 5. FORZAR ACTUALIZACIÓN DE TODOS LOS NODOS
+        console.log("5. Actualizando displays de nodos...");
         ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+            const state = treesState[treeId];
+            Object.keys(state.levels || {}).forEach(nodeId => {
+                updateNodeDisplay(treeId, nodeId);
+                updateNodeVisualState(treeId, nodeId);
+            });
             refreshAllowedDisplays(treeId);
         });
         
-        // ACTUALIZACIÓN FINAL: Actualizar visuales de todos los nodos
-        updateAllNodesVisuals();
+        // 6. ACTUALIZAR ESTADÍSTICAS ESPECÍFICAS
+        console.log("6. Actualizando estadísticas...");
+        updateSpecificStatsDisplay();
         
-        setLog(`Build "${buildName}" cargada correctamente.`);
+        setLog(`✅ Build "${buildName}" cargada correctamente.`);
+        console.log("✅ Build cargada exitosamente");
         return true;
         
     } catch (e) {
-        console.error('Error cargando build:', e);
-        setLog('Error al cargar la build. Puede ser incompatible.');
+        console.error('❌ Error cargando build:', e);
+        setLog('Error al cargar la build. Verifica la consola.');
         return false;
     }
+}
+
+// NUEVA FUNCIÓN: Re-inicializar árbol visualmente sin perder datos
+function reinitTreePreservingData(treeId) {
+    const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
+    if (!container) {
+        console.error(`❌ Contenedor no encontrado para ${treeId}`);
+        return;
+    }
+    
+    const state = treesState[treeId];
+    if (!state) {
+        console.error(`❌ Estado no encontrado para ${treeId}`);
+        return;
+    }
+    
+    console.log(`   • Re-inicializando ${treeId} (${Object.keys(state.levels || {}).length} nodos)`);
+    
+    // 1. Limpiar contenedor
+    container.innerHTML = "";
+    
+    // 2. Obtener tamaño del contenedor
+    const wrapper = container.parentElement;
+    if (wrapper) {
+        containerWidth = wrapper.clientWidth;
+        containerHeight = wrapper.clientHeight;
+        
+        if (containerWidth < 300) containerWidth = 300;
+        if (containerHeight < 200) containerHeight = 200;
+        
+        container.style.width = containerWidth + "px";
+        container.style.height = containerHeight + "px";
+    }
+    
+    // 3. Actualizar baseNodes
+    initializeBaseNodes();
+    
+    // 4. Limpiar y recrear links
+    links.length = 0;
+    baseNodes.forEach(cfg => {
+        if (!cfg.parents || cfg.parents.length === 0) return;
+        cfg.parents.forEach(p => {
+            links.push({ from: p, to: cfg.id });
+        });
+    });
+    
+    // 5. CREAR NODOS VISUALES (usando datos existentes)
+    baseNodes.forEach(cfg => {
+        const nodeElem = document.createElement("div");
+        nodeElem.classList.add("node");
+        
+        // NODO RAÍZ CON LOGO
+        if (cfg.type === "root") {
+            nodeElem.classList.add("root");
+            const logoFileName = "logomrg.png";
+            nodeElem.innerHTML = `
+                <div class="root-logo-container">
+                    <img src="${logoFileName}" 
+                         alt="Logo MRG"
+                         class="root-logo">
+                </div>
+            `;
+        } 
+        // NODOS NORMALES
+        else {
+            if (cfg.cssClass) nodeElem.classList.add(cfg.cssClass);
+            if (cfg.type === "final") nodeElem.classList.add("final-node");
+            
+            let displayTitle = cfg.title;
+            if (cfg.type === "tertiary") {
+                displayTitle = getTertiaryDisplayTitle(treeId, cfg.id);
+            }
+            
+            // Obtener nivel actual del estado (no resetear a 0)
+            const currentLevel = state.levels[cfg.id] ? state.levels[cfg.id].current : 0;
+            
+            nodeElem.innerHTML = `
+                <span class="node-title">${displayTitle}</span>
+                <span class="node-level">${currentLevel}/${cfg.max}</span>
+                <span class="cost">C:${calculateCurrentCost(cfg.id, currentLevel)}</span>
+            `;
+        }
+        
+        // POSICIÓN Y TAMAÑO
+        const x = (cfg.xPct / 100) * containerWidth;
+        const y = (cfg.yPct / 100) * containerHeight;
+        
+        let nodeSize = 80;
+        if (window.innerWidth <= 1200) nodeSize = 75;
+        if (window.innerWidth <= 900) nodeSize = 70;
+        if (window.innerWidth <= 768) nodeSize = 65;
+        if (window.innerWidth <= 600) nodeSize = 60;
+        if (window.innerWidth <= 400) nodeSize = 55;
+        
+        nodeElem.style.width = nodeSize + "px";
+        nodeElem.style.height = nodeSize + "px";
+        nodeElem.style.left = (x - nodeSize/2) + "px";
+        nodeElem.style.top = (y - nodeSize/2) + "px";
+        nodeElem.dataset.id = cfg.id;
+        nodeElem.dataset.treeId = treeId;
+        
+        // EVENTOS (excepto para root)
+        if (cfg.type !== "root") {
+            // Eventos mouse
+            nodeElem.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                startDowngradeTimer(treeId, cfg.id, nodeElem);
+            });
+            
+            nodeElem.addEventListener("mouseup", (e) => {
+                e.preventDefault();
+                const holdTime = Date.now() - tapStartTime;
+                if (holdTime < 800) {
+                    handleNodeClick(treeId, nodeElem, e);
+                }
+                stopDowngradeTimer(nodeElem);
+            });
+            
+            nodeElem.addEventListener("mouseleave", (e) => {
+                stopDowngradeTimer(nodeElem);
+            });
+            
+            // Eventos touch
+            nodeElem.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                startDowngradeTimer(treeId, cfg.id, nodeElem);
+            });
+            
+            nodeElem.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                const holdTime = Date.now() - tapStartTime;
+                if (holdTime < 800) {
+                    const simulatedEvent = { 
+                        ctrlKey: false, 
+                        metaKey: false,
+                        preventDefault: () => {} 
+                    };
+                    handleNodeClick(treeId, nodeElem, simulatedEvent);
+                }
+                stopDowngradeTimer(nodeElem);
+            });
+            
+            nodeElem.addEventListener("touchcancel", (e) => {
+                stopDowngradeTimer(nodeElem);
+            });
+        }
+        
+        container.appendChild(nodeElem);
+    });
+    
+    // 6. CREAR LÍNEAS ENTRE NODOS
+    links.forEach(link => {
+        const fromCfg = getNodeConfig(link.from);
+        const toCfg = getNodeConfig(link.to);
+        if (!fromCfg || !toCfg) return;
+        
+        const fromX = (fromCfg.xPct / 100) * containerWidth;
+        const fromY = (fromCfg.yPct / 100) * containerHeight;
+        const toX = (toCfg.xPct / 100) * containerWidth;
+        const toY = (toCfg.yPct / 100) * containerHeight;
+        
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        
+        const linkElem = document.createElement("div");
+        linkElem.classList.add("link");
+        
+        if (toCfg.branch === "orange") linkElem.classList.add("orange");
+        else if (toCfg.branch === "blue") linkElem.classList.add("blue");
+        else if (toCfg.branch === "yellow") linkElem.classList.add("yellow");
+        
+        linkElem.style.left = fromX + "px";
+        linkElem.style.top = fromY + "px";
+        linkElem.style.width = length + "px";
+        linkElem.style.transform = `rotate(${angle}deg)`;
+        
+        container.appendChild(linkElem);
+    });
+    
+    // 7. ACTUALIZAR ESTADO VISUAL
+    refreshAllowedDisplays(treeId);
 }
 
 // Eliminar una build
 function deleteBuild(buildName) {
     localStorage.removeItem(`tech_tree_build_${buildName}`);
 }
+// FUNCIÓN DE DIAGNÓSTICO DEL SISTEMA DE BUILDS
+function diagnoseBuildSystem() {
+    console.log("🔍 ===== DIAGNÓSTICO SISTEMA BUILDS =====");
+    
+    // 1. Verificar localStorage
+    const builds = getSavedBuilds();
+    console.log(`📊 Builds en localStorage: ${builds.length}`);
+    
+    if (builds.length === 0) {
+        console.log("   ⚠️  No hay builds guardadas");
+    } else {
+        builds.forEach((build, index) => {
+            console.log(`   ${index+1}. "${build.name}"`);
+            console.log(`      • Fecha: ${build.timestamp}`);
+            console.log(`      • Puntos: ${build.totalPoints.toLocaleString()}`);
+            
+            // Verificar contenido
+            try {
+                const data = JSON.parse(localStorage.getItem(`tech_tree_build_${build.name}`));
+                console.log(`      • Tech points guardados: ${data.techPoints || 'N/A'}`);
+                console.log(`      • Puntos final guardados: ${data.globalFinalPointsLeft || 'N/A'}`);
+                
+                // Contar nodos en cada árbol
+                ['guardian', 'vanguardia', 'canon'].forEach(tree => {
+                    if (data[tree] && data[tree].levels) {
+                        const nodes = Object.keys(data[tree].levels);
+                        const activeNodes = nodes.filter(id => data[tree].levels[id].current > 0);
+                        console.log(`      • ${tree}: ${activeNodes.length}/${nodes.length} nodos activos`);
+                    }
+                });
+            } catch (e) {
+                console.log(`      • ❌ Error leyendo datos: ${e.message}`);
+            }
+        });
+    }
+    
+    // 2. Verificar estado actual
+    console.log("\n📈 ESTADO ACTUAL DEL SIMULADOR:");
+    console.log(`   • Tech points: ${techPoints}`);
+    console.log(`   • Puntos final disponibles: ${globalFinalPointsLeft}`);
+    console.log(`   • Puntos gastados: ${totalPointsSpent}`);
+    
+    // 3. Verificar que los árboles tengan datos
+    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+        const state = treesState[treeId];
+        if (state && state.levels) {
+            const nodes = Object.keys(state.levels);
+            const activeNodes = nodes.filter(id => state.levels[id].current > 0);
+            console.log(`   • ${treeId}: ${activeNodes.length} nodos activos`);
+        }
+    });
+    
+    console.log("========================================");
+    
+    // Mostrar también en UI
+    const summary = `Diagnóstico: ${builds.length} builds guardadas. Estado actual: ${techPoints} tech points, ${globalFinalPointsLeft} puntos final.`;
+    setLog(summary);
+}
 
+// Hacer disponible en consola
+window.diagnoseBuilds = diagnoseBuildSystem;
 </script>
 </body>
 </html>
