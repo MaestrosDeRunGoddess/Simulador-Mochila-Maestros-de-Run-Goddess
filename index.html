@@ -5182,11 +5182,34 @@ function loadBuild(buildName) {
         console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
         console.log(`   • Puntos gastados: ${totalPointsSpent}`);
         
-        // 3. RE-CREAR VISUALES DE ÁRBOLES
-        console.log("3. Recreando árboles visualmente...");
+       // 3. RE-CREAR VISUALES DE ÁRBOLES
+console.log("3. Recreando árboles visualmente...");
+['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+    reinitTreePreservingData(treeId);
+});
+
+// ===== NUEVO: ACTUALIZACIÓN EXTRA DESPUÉS DE RECREAR =====
+setTimeout(() => {
+    // Actualizar TODA la UI global
+    updateGlobalUI();
+    updateSpecificStatsDisplay();
+    
+    // Forzar sincronización completa
+    forceSyncAllTrees();
+    
+    // Feedback visual adicional para móvil
+    if (isMobile) {
         ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
-            reinitTreePreservingData(treeId);
+            const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
+            if (container) {
+                container.style.transform = 'translateZ(0)';
+                void container.offsetWidth;
+                container.style.transform = '';
+            }
         });
+    }
+}, 100);
+// ===== FIN NUEVO =====
         
         // 4. ACTUALIZAR UI GLOBAL
         console.log("4. Actualizando UI global...");
@@ -5326,89 +5349,81 @@ function reinitTreePreservingData(treeId) {
         nodeElem.dataset.id = cfg.id;
         nodeElem.dataset.treeId = treeId;
         
-        // EVENTOS UNIFICADOS MEJORADOS PARA MÓVIL/PC (excepto root)
-if (cfg.type !== "root") {
-    let isDragging = false;
-    let startX, startY;
-    const DRAG_THRESHOLD = 5; // píxeles para considerar arrastre
-    
-    // TOUCH START
-    nodeElem.addEventListener('touchstart', function(e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        startX = touch.clientX;
-        startY = touch.clientY;
-        isDragging = false;
-        
-        startDowngradeTimer(treeId, cfg.id, this);
-    }, { passive: false });
-    
-    // TOUCH MOVE - DETECTAR SI ES ARRASTRE REAL
-    nodeElem.addEventListener('touchmove', function(e) {
-        if (!e.touches[0]) return;
-        
-        const touch = e.touches[0];
-        const deltaX = Math.abs(touch.clientX - startX);
-        const deltaY = Math.abs(touch.clientY - startY);
-        
-        // Si se movió más del umbral, es arrastre
-        if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
-            isDragging = true;
-            e.preventDefault();
+        // EVENTOS OPTIMIZADOS PARA RENDIMIENTO (excepto root)
+        if (cfg.type !== "root") {
+            let touchStartTime = 0;
+            let isTouchActive = false;
             
-            // IMPORTANTE: Forzar visualización durante el arrastre
-            forceNodeDisplayDuringDrag(treeId, cfg.id);
+            // TOUCH START - simple y rápido
+            nodeElem.addEventListener('touchstart', function(e) {
+                if (e.touches.length > 1) return; // Ignorar multi-touch
+                e.stopPropagation();
+                touchStartTime = Date.now();
+                isTouchActive = true;
+                
+                // Iniciar downgrade con delay mínimo
+                setTimeout(() => {
+                    if (isTouchActive) {
+                        startDowngradeTimer(treeId, cfg.id, this);
+                    }
+                }, 50);
+            }, { passive: true }); // IMPORTANTE: passive: true para mejor rendimiento
             
-            // Detener downgrade si estaba activo
-            if (downgradeNodeId === cfg.id) {
+            // TOUCH MOVE - mínimo impacto
+            nodeElem.addEventListener('touchmove', function(e) {
+                // Solo marcar que no es un click
+                isTouchActive = false;
                 stopDowngradeTimer(this);
-            }
+            }, { passive: true }); // passive: true para scroll fluido
+            
+            // TOUCH END - respuesta inmediata
+            nodeElem.addEventListener('touchend', function(e) {
+                e.stopPropagation();
+                
+                const touchTime = Date.now() - touchStartTime;
+                
+                // Si fue un toque rápido (menos de 300ms)
+                if (touchTime < 300 && !downgradeNodeId) {
+                    const simulatedEvent = { 
+                        ctrlKey: false, 
+                        metaKey: false,
+                        preventDefault: () => {},
+                        timeStamp: e.timeStamp
+                    };
+                    
+                    // Ejecutar inmediatamente
+                    handleNodeClick(treeId, this, simulatedEvent);
+                }
+                
+                stopDowngradeTimer(this);
+                isTouchActive = false;
+            }, { passive: true });
+            
+            // TOUCH CANCEL
+            nodeElem.addEventListener('touchcancel', function(e) {
+                stopDowngradeTimer(this);
+                isTouchActive = false;
+            }, { passive: true });
+            
+            // EVENTOS DE MOUSE (mantener igual pero optimizados)
+            nodeElem.addEventListener("mousedown", function(e) {
+                e.preventDefault();
+                startDowngradeTimer(treeId, cfg.id, this);
+            });
+            
+            nodeElem.addEventListener("mouseup", function(e) {
+                e.preventDefault();
+                const holdTime = Date.now() - tapStartTime;
+                if (holdTime < 800 && !downgradeNodeId) {
+                    handleNodeClick(treeId, this, e);
+                }
+                stopDowngradeTimer(this);
+            });
+            
+            nodeElem.addEventListener("mouseleave", function(e) {
+                stopDowngradeTimer(this);
+            });
         }
-    }, { passive: false });
-    
-    // TOUCH END
-    nodeElem.addEventListener('touchend', function(e) {
-        e.preventDefault();
-        
-        if (!isDragging) {
-            // Fue un toque, no arrastre
-            const simulatedEvent = { 
-                ctrlKey: false, 
-                metaKey: false,
-                preventDefault: () => {} 
-            };
-            handleNodeClick(treeId, this, simulatedEvent);
-        }
-        
-        stopDowngradeTimer(this);
-        isDragging = false;
-    }, { passive: false });
-    
-    // TOUCH CANCEL
-    nodeElem.addEventListener('touchcancel', function(e) {
-        stopDowngradeTimer(this);
-        isDragging = false;
-    }, { passive: false });
-    
-    // EVENTOS DE MOUSE (para desktop)
-    nodeElem.addEventListener("mousedown", function(e) {
-        e.preventDefault();
-        startDowngradeTimer(treeId, cfg.id, this);
-    });
-    
-    nodeElem.addEventListener("mouseup", function(e) {
-        e.preventDefault();
-        const holdTime = Date.now() - tapStartTime;
-        if (holdTime < 800) {
-            handleNodeClick(treeId, this, e);
-        }
-        stopDowngradeTimer(this);
-    });
-    
-    nodeElem.addEventListener("mouseleave", function(e) {
-        stopDowngradeTimer(this);
-    });
-}
         
         container.appendChild(nodeElem);
     });
@@ -5446,6 +5461,36 @@ if (cfg.type !== "root") {
     
     // 7. ACTUALIZAR ESTADO VISUAL
     refreshAllowedDisplays(treeId);
+    
+    // ===== NUEVO: FORZAR ACTUALIZACIÓN VISUAL COMPLETA =====
+    // Esperar un frame para que los elementos existan en el DOM
+    setTimeout(() => {
+        if (state && state.levels) {
+            Object.keys(state.levels).forEach(nodeId => {
+                // Actualizar display numérico
+                updateNodeDisplay(treeId, nodeId);
+                
+                // Actualizar estado visual (colores)
+                updateNodeVisualState(treeId, nodeId);
+                
+                // Asegurar visibilidad en móvil
+                if (isMobile) {
+                    const elem = getNodeElement(treeId, nodeId);
+                    if (elem && state.levels[nodeId] && state.levels[nodeId].current > 0) {
+                        elem.classList.remove("node-locked");
+                        // Truco para forzar renderizado en móvil
+                        elem.style.opacity = '0.99';
+                        void elem.offsetWidth;
+                        elem.style.opacity = '1';
+                    }
+                }
+            });
+        }
+        
+        // Actualizar UI global para este árbol específico
+        updateGlobalUI();
+    }, 50);
+    // ===== FIN NUEVO =====
 }
 
 // Eliminar una build (de TODAS las fuentes)
