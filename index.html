@@ -853,6 +853,36 @@ button:hover {
     }
 }
 
+/* ============ ARREGLAR DESAPARICIÓN DE VALORES EN MÓVIL ============ */
+@media (max-width: 768px) {
+    .node-level, .cost, .node-title {
+        will-change: transform, opacity !important;
+        backface-visibility: hidden !important;
+        -webkit-backface-visibility: hidden !important;
+        transform: translateZ(0) !important;
+        -webkit-transform: translateZ(0) !important;
+    }
+    
+    /* Forzar renderizado independiente */
+    .node > * {
+        isolation: isolate !important;
+    }
+    
+    /* Prevenir parpadeo en iOS */
+    .node {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+    }
+}
+
+/* Fix específico para Safari iOS */
+@supports (-webkit-touch-callout: none) {
+    .node-level, .cost {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
 </style>
 </head>
 
@@ -3611,10 +3641,21 @@ function performSingleUpgrade(treeId, nodeId) {
         console.log(`🔓 Rama ${cfg.branch} desbloqueada (final completado)`);
     }
     
-    // 11. Actualizar visual
-    updateNodeDisplay(treeId, nodeId);
-    updateNodeVisualState(treeId, nodeId);
-    updateGlobalUI();
+   // 11. Actualizar visual
+updateNodeDisplay(treeId, nodeId);
+updateNodeVisualState(treeId, nodeId);
+updateGlobalUI();
+
+// 11b. ACTUALIZACIÓN ESPECIAL PARA MÓVIL
+if (isMobile) {
+    forceMobileVisualUpdate(treeId, nodeId);
+    // También forzar actualización de padres inmediatos
+    if (cfg.parents) {
+        cfg.parents.forEach(parentId => {
+            setTimeout(() => forceMobileVisualUpdate(treeId, parentId), 10);
+        });
+    }
+}
     
     // 12. Actualizar estado de desbloqueo si es necesario
     if (!state.unlockedNodes.has(nodeId)) {
@@ -3670,9 +3711,18 @@ function performSingleDowngrade(treeId, nodeId) {
     }
     
     // 6. Actualizar visual
-    updateNodeDisplay(treeId, nodeId);
-    updateNodeVisualState(treeId, nodeId);
-    updateGlobalUI();
+updateNodeDisplay(treeId, nodeId);
+updateNodeVisualState(treeId, nodeId);
+updateGlobalUI();
+
+// 6b. ACTUALIZACIÓN ESPECIAL PARA MÓVIL
+if (isMobile) {
+    forceMobileVisualUpdate(treeId, nodeId);
+    // Forzar actualización de hijos que podrían verse afectados
+    setTimeout(() => {
+        refreshAllowedDisplays(treeId);
+    }, 30);
+}
     
     // 7. Log
     setLog(`Bajaste 1 nivel en ${cfg.title}. +${costToRefund} pts.`);
@@ -4030,9 +4080,30 @@ function updateNodeDisplay(treeId, nodeId) {
     const costSpan = elem.querySelector(".cost");
 
     if (cfg.max > 0) {
-        levelSpan.textContent = `${lvl.current}/${cfg.max}`;
-        const currentCost = calculateCurrentCost(nodeId, lvl.current);
-        costSpan.textContent = `C:${currentCost}`;
+        // ACTUALIZACIÓN SEGURA (evita NaN/undefined)
+        const currentLevel = lvl.current || 0;
+        const maxLevel = cfg.max || 0;
+        
+        if (levelSpan) {
+            levelSpan.textContent = `${currentLevel}/${maxLevel}`;
+            // FORZAR ACTUALIZACIÓN PARA MÓVIL
+            if (isMobile) {
+                levelSpan.style.display = 'none';
+                void levelSpan.offsetWidth; // Re-flow
+                levelSpan.style.display = '';
+            }
+        }
+        
+        if (costSpan) {
+            const currentCost = calculateCurrentCost(nodeId, currentLevel);
+            costSpan.textContent = `C:${currentCost}`;
+            // FORZAR ACTUALIZACIÓN PARA MÓVIL
+            if (isMobile) {
+                costSpan.style.opacity = '0.99';
+                void costSpan.offsetWidth;
+                costSpan.style.opacity = '';
+            }
+        }
     }
 
     // Actualizar título si es un nodo terciario
@@ -4040,7 +4111,19 @@ function updateNodeDisplay(treeId, nodeId) {
         const titleSpan = elem.querySelector(".node-title");
         if (titleSpan) {
             titleSpan.textContent = getTertiaryDisplayTitle(treeId, nodeId);
+            // FORZAR ACTUALIZACIÓN PARA MÓVIL
+            if (isMobile) {
+                titleSpan.style.fontSize = '0px';
+                void titleSpan.offsetWidth;
+                titleSpan.style.fontSize = '';
+            }
         }
+    }
+    
+    // FORZAR ACTUALIZACIÓN COMPLETA DEL ELEMENTO EN MÓVIL
+    if (isMobile) {
+        elem.style.transform = 'translateZ(0)'; // Acelerar hardware
+        void elem.offsetWidth; // Re-flow forzado
     }
 }
 
@@ -4048,7 +4131,17 @@ function updateNodeDisplay(treeId, nodeId) {
 function forceSyncAllTrees() {
     console.log("🔄 Forzando sincronización completa...");
     
-    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+    const treesToUpdate = ['guardian', 'vanguardia', 'canon'];
+    
+    // EN MÓVIL: Actualizar solo el árbol activo (más rápido)
+    if (isMobile) {
+        const activeTab = document.querySelector('.tab-button.active');
+        if (activeTab && activeTab.dataset.tab !== 'about') {
+            treesToUpdate = [activeTab.dataset.tab];
+        }
+    }
+    
+    treesToUpdate.forEach(treeId => {
         const state = treesState[treeId];
         const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
         
@@ -4060,8 +4153,12 @@ function forceSyncAllTrees() {
             const elem = container.querySelector(`.node[data-id="${nodeId}"]`);
             
             if (elem && lvl) {
-                // 2. Actualizar display numérico
-                updateNodeDisplay(treeId, nodeId);
+                // 2. Actualizar display numérico (CON FORZADO MÓVIL)
+                if (isMobile) {
+                    forceMobileVisualUpdate(treeId, nodeId);
+                } else {
+                    updateNodeDisplay(treeId, nodeId);
+                }
                 
                 // 3. Actualizar estado visual
                 updateNodeVisualState(treeId, nodeId);
@@ -4070,12 +4167,62 @@ function forceSyncAllTrees() {
         
         // 4. Actualizar restricciones de rama
         refreshAllowedDisplays(treeId);
+        
+        // 5. EN MÓVIL: Forzar re-flow completo del contenedor
+        if (isMobile) {
+            container.style.opacity = '0.999';
+            void container.offsetWidth;
+            container.style.opacity = '';
+        }
     });
     
-    // 5. Actualizar UI global
+    // 6. Actualizar UI global
     updateGlobalUI();
     
     console.log("✅ Sincronización forzada completada");
+}
+
+// ======================== ACTUALIZACIÓN VISUAL PARA MÓVIL ===========================
+function forceMobileVisualUpdate(treeId, nodeId) {
+    if (!isMobile) return;
+    
+    const elem = getNodeElement(treeId, nodeId);
+    if (!elem) return;
+    
+    const cfg = getNodeConfig(nodeId);
+    const state = treesState[treeId];
+    const lvl = state.levels[nodeId];
+    
+    if (!cfg || !lvl) return;
+    
+    // 1. ACTUALIZAR TEXTO INMEDATAMENTE
+    const levelSpan = elem.querySelector(".node-level");
+    const costSpan = elem.querySelector(".cost");
+    
+    if (levelSpan && cfg.max > 0) {
+        levelSpan.textContent = `${lvl.current}/${cfg.max}`;
+    }
+    
+    if (costSpan) {
+        const currentCost = calculateCurrentCost(nodeId, lvl.current);
+        costSpan.textContent = `C:${currentCost}`;
+    }
+    
+    // 2. FORZAR RE-FLOW DEL DOM (truco para móvil)
+    void elem.offsetWidth;
+    
+    // 3. APLICAR CLASES DE ESTADO
+    elem.classList.remove('node-efficient', 'node-overleveled', 'node-critical');
+    updateNodeVisualState(treeId, nodeId);
+    
+    // 4. PEQUEÑO RETRASO Y LUEGO OTRA ACTUALIZACIÓN (para iOS)
+    setTimeout(() => {
+        if (levelSpan) {
+            levelSpan.textContent = `${lvl.current}/${cfg.max}`;
+            // Forzar otro re-flow
+            void levelSpan.offsetWidth;
+        }
+    }, 50);
 }
 
 function resetAll() {
@@ -5627,6 +5774,7 @@ function initAutoSave() {
     
     console.log("🔄 Auto-save inicializado");
 }
+
 </script>
 </body>
 </html>
