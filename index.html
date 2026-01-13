@@ -883,6 +883,96 @@ button:hover {
     }
 }
 
+/* ========== FIX PARA DESAPARICIÓN EN MÓVIL DURANTE SCROLL ========== */
+@media (max-width: 768px) {
+    .node {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        will-change: transform, opacity;
+        transform-style: preserve-3d;
+    }
+    
+    .node-level, .cost, .node-title {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        isolation: isolate;
+        display: inline-block !important;
+    }
+    
+    .tree-container-wrapper {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ========== FIX DEFINITIVO PARA FLICKERING EN MÓVIL ========== */
+@media (max-width: 768px) {
+    .node {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -webkit-perspective: 1000;
+        perspective: 1000;
+        transform-style: flat;
+        will-change: transform;
+        z-index: 2;
+        position: absolute !important;
+    }
+    
+    .node span {
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: geometricPrecision !important;
+        transform: translateZ(0) !important;
+        -webkit-transform: translateZ(0) !important;
+        display: inline-block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: relative;
+        z-index: 3;
+    }
+    
+    .node-level, .cost {
+        font-weight: bold !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.8) !important;
+    }
+    
+    /* Prevenir que el navegador oculte elementos durante scroll */
+    .tree-container {
+        -webkit-transform-style: preserve-3d;
+        transform-style: preserve-3d;
+        overflow: visible !important;
+    }
+    
+    .tree-container-wrapper {
+        -webkit-overflow-scrolling: touch;
+        overflow: auto;
+        transform: translate3d(0,0,0);
+    }
+    
+    /* Forzar repaint durante scroll */
+    .node::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: -1;
+        opacity: 0;
+    }
+}
+
+/* Hack específico para Safari iOS */
+@supports (-webkit-touch-callout: none) {
+    .node {
+        -webkit-transform: translate3d(0,0,0) scale(1);
+    }
+}
+
 </style>
 </head>
 
@@ -3225,12 +3315,12 @@ function handleDoubleClickMilestoneChain(treeId, nodeId) {
 if (cfg.type === 'final') {
     // Si el Final no está en 1, subirlo primero
     if (currentLevel < 1) {
-        console.log(`Subiendo Final ${cfg.branch} de ${currentLevel} → 1`);
+    // console.log(`Subiendo Final ${cfg.branch} de ${currentLevel} → 1`);
         if (!upgradeNodeToLevel(treeId, nodeId, 1)) {
             return false;
         }
     } else {
-        console.log(`Final ${cfg.branch} ya está en nivel 1`);
+     //   console.log(`Final ${cfg.branch} ya está en nivel 1`);
     }
     
     // Ahora subir TODOS los padres al siguiente hito
@@ -3252,7 +3342,7 @@ if (cfg.type === 'final') {
         return false;
     }
     
-    console.log(`Doble click: ${nodeId} de ${currentLevel} → ${finalTarget}`);
+    // console.log(`Doble click: ${nodeId} de ${currentLevel} → ${finalTarget}`);
     
     // PASO 1: Subir ESTE nodo al hito
     if (!upgradeNodeToLevel(treeId, nodeId, finalTarget)) {
@@ -3294,7 +3384,7 @@ function upgradeAllParentsToNextMilestone(treeId, nodeId) {
     if (!cfg || cfg.type !== 'final') return;
     
     const branch = cfg.branch;
-    console.log(`Subiendo padres de Final ${branch} al siguiente hito...`);
+    // console.log(`Subiendo padres de Final ${branch} al siguiente hito...`);
     
     // Definir TODOS los nodos padres en orden (de hijos a padres)
     const parentNodes = [
@@ -3319,7 +3409,7 @@ function upgradeAllParentsToNextMilestone(treeId, nodeId) {
         
         // Solo subir si no está ya en ese hito y no supera máximo
         if (currentLevel < nextMilestone && nextMilestone <= parentCfg.max) {
-            console.log(`  ${parentId}: ${currentLevel} → ${nextMilestone}`);
+        //    console.log(`  ${parentId}: ${currentLevel} → ${nextMilestone}`);
             
             // Subir nivel por nivel (no usar upgradeNodeToLevel que calcula requisitos)
             for (let lvl = currentLevel; lvl < nextMilestone; lvl++) {
@@ -3470,7 +3560,7 @@ function handleNodeClick(treeId, nodeElem, e) {
     const currentTime = Date.now();
     
     // Detectar doble click (mismo nodo en < 400ms)
-    const isDoubleClick = (currentTime - lastClickTime < 400) && 
+    const isDoubleClick = (currentTime - lastClickTime < 250) && 
                          (lastClickedNodeId === nodeId) && 
                          (lastClickedTreeId === treeId);
     
@@ -3541,6 +3631,19 @@ function stopDowngradeTimer(nodeElem) {
 
     if (nodeElem) {
         nodeElem.classList.remove('node-downgrading');
+        
+        // FORZAR ACTUALIZACIÓN VISUAL AL PARAR DOWNGRADE
+        const treeId = nodeElem.dataset.treeId;
+        const nodeId = nodeElem.dataset.id;
+        
+        if (treeId && nodeId) {
+            setTimeout(() => {
+                updateNodeDisplay(treeId, nodeId);
+                updateNodeVisualState(treeId, nodeId);
+                // También actualizar UI global por si acaso
+                updateGlobalUI();
+            }, 20);
+        }
     }
 
     downgradeTreeId = null;
@@ -3631,7 +3734,7 @@ function performSingleUpgrade(treeId, nodeId) {
         
         if (!hasCompletedFinal) {
             state.lockedBranch = cfg.branch;
-            console.log(`🔒 Rama ${cfg.branch} bloqueada por ${nodeId} nivel 1`);
+        //    console.log(`🔒 Rama ${cfg.branch} bloqueada por ${nodeId} nivel 1`);
         }
     }
     
@@ -3978,51 +4081,103 @@ function initTree(treeId) {
         nodeElem.dataset.id = cfg.id;
         nodeElem.dataset.treeId = treeId;
 
-        // EVENTOS (excepto para root)
-        if (cfg.type !== "root") {
-            // Eventos mouse
-            nodeElem.addEventListener("mousedown", (e) => {
-                e.preventDefault();
-                startDowngradeTimer(treeId, cfg.id, nodeElem);
-            });
-
-            nodeElem.addEventListener("mouseup", (e) => {
-                e.preventDefault();
-                const holdTime = Date.now() - tapStartTime;
-                if (holdTime < 800) {
-                    handleNodeClick(treeId, nodeElem, e);
-                }
-                stopDowngradeTimer(nodeElem);
-            });
-
-            nodeElem.addEventListener("mouseleave", (e) => {
-                stopDowngradeTimer(nodeElem);
-            });
-
-            // Eventos touch
-            nodeElem.addEventListener("touchstart", (e) => {
-                e.preventDefault();
-                startDowngradeTimer(treeId, cfg.id, nodeElem);
-            });
-
-            nodeElem.addEventListener("touchend", (e) => {
-                e.preventDefault();
-                const holdTime = Date.now() - tapStartTime;
-                if (holdTime < 800) {
-                    const simulatedEvent = { 
-                        ctrlKey: false, 
-                        metaKey: false,
-                        preventDefault: () => {} 
-                    };
-                    handleNodeClick(treeId, nodeElem, simulatedEvent);
-                }
-                stopDowngradeTimer(nodeElem);
-            });
-
-            nodeElem.addEventListener("touchcancel", (e) => {
-                stopDowngradeTimer(nodeElem);
-            });
+        // EVENTOS UNIFICADOS PARA MÓVIL Y PC
+if (cfg.type !== "root") {
+    let isTouchDevice = false;
+    let activeTouchId = null;
+    
+    // SISTEMA UNIFICADO: detecta si es touch o mouse
+    const handlePointerStart = (e) => {
+        e.preventDefault();
+        
+        // Para touch: usar solo primer dedo
+        if (e.type === 'touchstart') {
+            if (e.touches.length > 1) return; // Ignorar multi-touch
+            isTouchDevice = true;
+            activeTouchId = e.touches[0].identifier;
+        } else {
+            isTouchDevice = false;
         }
+        
+        startDowngradeTimer(treeId, cfg.id, nodeElem);
+    };
+    
+    const handlePointerEnd = (e) => {
+        e.preventDefault();
+        
+        // Para touch: verificar que sea el mismo dedo
+        if (e.type === 'touchend' && isTouchDevice) {
+            if (activeTouchId !== null && 
+                Array.from(e.changedTouches).some(t => t.identifier === activeTouchId)) {
+                processClick(e);
+            }
+        } 
+        // Para mouse
+        else if (e.type === 'mouseup' && !isTouchDevice) {
+            processClick(e);
+        }
+        
+        stopDowngradeTimer(nodeElem);
+        activeTouchId = null;
+    };
+    
+    const processClick = (e) => {
+        const holdTime = Date.now() - tapStartTime;
+        
+        // Solo procesar clicks cortos (no hold)
+        if (holdTime < 800) {
+            // Para touch, crear evento simulado
+            const eventToUse = isTouchDevice ? {
+                ctrlKey: false,
+                metaKey: false,
+                preventDefault: () => {},
+                // Detectar doble tap
+                timeStamp: e.timeStamp || Date.now()
+            } : e;
+            
+            // Pequeño delay para evitar doble ejecución
+            setTimeout(() => {
+                if (!downgradeNodeId) {
+                    handleNodeClick(treeId, nodeElem, eventToUse);
+                }
+            }, isTouchDevice ? 50 : 10); // Más delay en touch
+        }
+    };
+    
+    // Registrar eventos
+    nodeElem.addEventListener("mousedown", handlePointerStart);
+    nodeElem.addEventListener("mouseup", handlePointerEnd);
+    nodeElem.addEventListener("mouseleave", () => {
+        stopDowngradeTimer(nodeElem);
+        activeTouchId = null;
+    });
+    
+    nodeElem.addEventListener("touchstart", handlePointerStart);
+    nodeElem.addEventListener("touchend", handlePointerEnd);
+    nodeElem.addEventListener("touchcancel", () => {
+        stopDowngradeTimer(nodeElem);
+        activeTouchId = null;
+    });
+    
+    // Manejar arrastres en touch
+nodeElem.addEventListener("touchmove", (e) => {
+    if (isTouchDevice) {
+        e.preventDefault();
+        
+        // Si estábamos en modo downgrade, detenerlo
+        if (downgradeNodeId === nodeId) {
+            stopDowngradeTimer(nodeElem);
+            activeTouchId = null;
+            
+            // IMPORTANTE: Forzar actualización visual del nodo actual
+            setTimeout(() => {
+                updateNodeDisplay(treeId, nodeId);
+                updateNodeVisualState(treeId, nodeId);
+            }, 10);
+        }
+    }
+});
+}
 
         container.appendChild(nodeElem);
 
@@ -4127,25 +4282,18 @@ function updateNodeDisplay(treeId, nodeId) {
     }
 }
 
-// ======================== SINCRONIZACIÓN FORZADA ===========================
+// ======================== SINCRONIZACIÓN FORZADA (VERSIÓN ROBUSTA) ===========================
 function forceSyncAllTrees() {
-    console.log("🔄 Forzando sincronización completa...");
+  //  console.log("🔄 Forzando sincronización completa...");
     
+    // SIEMPRE actualizar todos los árboles para asegurar consistencia
     const treesToUpdate = ['guardian', 'vanguardia', 'canon'];
-    
-    // EN MÓVIL: Actualizar solo el árbol activo (más rápido)
-    if (isMobile) {
-        const activeTab = document.querySelector('.tab-button.active');
-        if (activeTab && activeTab.dataset.tab !== 'about') {
-            treesToUpdate = [activeTab.dataset.tab];
-        }
-    }
     
     treesToUpdate.forEach(treeId => {
         const state = treesState[treeId];
         const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
         
-        if (!container) return;
+        if (!container || !state) return;
         
         // 1. Para cada nodo en el estado
         Object.keys(state.levels || {}).forEach(nodeId => {
@@ -4153,12 +4301,8 @@ function forceSyncAllTrees() {
             const elem = container.querySelector(`.node[data-id="${nodeId}"]`);
             
             if (elem && lvl) {
-                // 2. Actualizar display numérico (CON FORZADO MÓVIL)
-                if (isMobile) {
-                    forceMobileVisualUpdate(treeId, nodeId);
-                } else {
-                    updateNodeDisplay(treeId, nodeId);
-                }
+                // 2. Actualizar display numérico
+                updateNodeDisplay(treeId, nodeId);
                 
                 // 3. Actualizar estado visual
                 updateNodeVisualState(treeId, nodeId);
@@ -4167,19 +4311,12 @@ function forceSyncAllTrees() {
         
         // 4. Actualizar restricciones de rama
         refreshAllowedDisplays(treeId);
-        
-        // 5. EN MÓVIL: Forzar re-flow completo del contenedor
-        if (isMobile) {
-            container.style.opacity = '0.999';
-            void container.offsetWidth;
-            container.style.opacity = '';
-        }
     });
     
-    // 6. Actualizar UI global
+    // 5. Actualizar UI global
     updateGlobalUI();
     
-    console.log("✅ Sincronización forzada completada");
+  //  console.log("✅ Sincronización forzada completada");
 }
 
 // ======================== ACTUALIZACIÓN VISUAL PARA MÓVIL ===========================
@@ -4195,34 +4332,56 @@ function forceMobileVisualUpdate(treeId, nodeId) {
     
     if (!cfg || !lvl) return;
     
-    // 1. ACTUALIZAR TEXTO INMEDATAMENTE
+    // 1. Asegurar que el elemento esté en capa GPU
+    elem.style.transform = 'translateZ(0)';
+    
+    // 2. Actualizar texto con truco anti-flicker
     const levelSpan = elem.querySelector(".node-level");
     const costSpan = elem.querySelector(".cost");
+    const titleSpan = elem.querySelector(".node-title");
+    
+    const updateSpan = (span, text) => {
+        if (span) {
+            // Guardar posición de scroll
+            const scrollTop = document.documentElement.scrollTop;
+            
+            // Actualizar texto
+            span.textContent = text;
+            
+            // Forzar reflow con truco de opacity
+            span.style.opacity = '0.999';
+            void span.offsetWidth;
+            span.style.opacity = '1';
+            
+            // Restaurar posición de scroll (evita saltos)
+            document.documentElement.scrollTop = scrollTop;
+        }
+    };
     
     if (levelSpan && cfg.max > 0) {
-        levelSpan.textContent = `${lvl.current}/${cfg.max}`;
+        updateSpan(levelSpan, `${lvl.current}/${cfg.max}`);
     }
     
     if (costSpan) {
         const currentCost = calculateCurrentCost(nodeId, lvl.current);
-        costSpan.textContent = `C:${currentCost}`;
+        updateSpan(costSpan, `C:${currentCost}`);
     }
     
-    // 2. FORZAR RE-FLOW DEL DOM (truco para móvil)
+    if (titleSpan && cfg.type === "tertiary") {
+        updateSpan(titleSpan, getTertiaryDisplayTitle(treeId, nodeId));
+    }
+    
+    // 3. Forzar reflow completo
     void elem.offsetWidth;
     
-    // 3. APLICAR CLASES DE ESTADO
+    // 4. Actualizar estado visual
     elem.classList.remove('node-efficient', 'node-overleveled', 'node-critical');
     updateNodeVisualState(treeId, nodeId);
     
-    // 4. PEQUEÑO RETRASO Y LUEGO OTRA ACTUALIZACIÓN (para iOS)
+    // 5. Restaurar transform después
     setTimeout(() => {
-        if (levelSpan) {
-            levelSpan.textContent = `${lvl.current}/${cfg.max}`;
-            // Forzar otro re-flow
-            void levelSpan.offsetWidth;
-        }
-    }, 50);
+        elem.style.transform = '';
+    }, 100);
 }
 
 function resetAll() {
@@ -4522,15 +4681,22 @@ window.addEventListener('load', () => {
         initBuildSystem();
         initAutoSave();
         
+        // ===== NUEVO: INICIALIZAR MEJORAS PARA MÓVIL =====
+        if (isMobile) {
+            console.log("📱 Modo móvil detectado, aplicando mejoras visuales...");
+            setupScrollObserver();
+        }
+        // ===== FIN NUEVO =====
+        
         // DIAGNÓSTICO INICIAL
-        console.log("=== DIAGNÓSTICO INICIAL ===");
-        console.log("Tech points iniciales:", techPoints);
-        console.log("Puntos final iniciales:", globalFinalPointsLeft);
+     //   console.log("=== DIAGNÓSTICO INICIAL ===");
+    //    console.log("Tech points iniciales:", techPoints);
+      //  console.log("Puntos final iniciales:", globalFinalPointsLeft);
         
         ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
             const state = treesState[treeId];
-            console.log(`Árbol ${treeId}:`, 
-                Object.keys(state.levels || {}).length, "nodos definidos");
+       //    console.log(`Árbol ${treeId}:`, 
+       //         Object.keys(state.levels || {}).length, "nodos definidos");
         });
         
         // Forzar primera sincronización
@@ -4539,9 +4705,18 @@ window.addEventListener('load', () => {
         // Cargar estado de URL si existe
         setTimeout(() => {
             if (loadStateFromURL()) {
-                console.log("✅ Estado cargado desde URL");
+         //     console.log("✅ Estado cargado desde URL");
                 // Sincronizar después de cargar
-                setTimeout(forceSyncAllTrees, 100);
+                setTimeout(() => {
+                    forceSyncAllTrees();
+                    // ===== NUEVO: Sincronizar visuales en móvil =====
+                    if (isMobile) {
+                        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+                            forceSyncTreeVisuals(treeId);
+                        });
+                    }
+                    // ===== FIN NUEVO =====
+                }, 100);
             }
         }, 1000);
     }, 100);
@@ -5151,51 +5326,89 @@ function reinitTreePreservingData(treeId) {
         nodeElem.dataset.id = cfg.id;
         nodeElem.dataset.treeId = treeId;
         
-        // EVENTOS (excepto para root)
-        if (cfg.type !== "root") {
-            // Eventos mouse
-            nodeElem.addEventListener("mousedown", (e) => {
-                e.preventDefault();
-                startDowngradeTimer(treeId, cfg.id, nodeElem);
-            });
+        // EVENTOS UNIFICADOS MEJORADOS PARA MÓVIL/PC (excepto root)
+if (cfg.type !== "root") {
+    let isDragging = false;
+    let startX, startY;
+    const DRAG_THRESHOLD = 5; // píxeles para considerar arrastre
+    
+    // TOUCH START
+    nodeElem.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        isDragging = false;
+        
+        startDowngradeTimer(treeId, cfg.id, this);
+    }, { passive: false });
+    
+    // TOUCH MOVE - DETECTAR SI ES ARRASTRE REAL
+    nodeElem.addEventListener('touchmove', function(e) {
+        if (!e.touches[0]) return;
+        
+        const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - startX);
+        const deltaY = Math.abs(touch.clientY - startY);
+        
+        // Si se movió más del umbral, es arrastre
+        if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+            isDragging = true;
+            e.preventDefault();
             
-            nodeElem.addEventListener("mouseup", (e) => {
-                e.preventDefault();
-                const holdTime = Date.now() - tapStartTime;
-                if (holdTime < 800) {
-                    handleNodeClick(treeId, nodeElem, e);
-                }
-                stopDowngradeTimer(nodeElem);
-            });
+            // IMPORTANTE: Forzar visualización durante el arrastre
+            forceNodeDisplayDuringDrag(treeId, cfg.id);
             
-            nodeElem.addEventListener("mouseleave", (e) => {
-                stopDowngradeTimer(nodeElem);
-            });
-            
-            // Eventos touch
-            nodeElem.addEventListener("touchstart", (e) => {
-                e.preventDefault();
-                startDowngradeTimer(treeId, cfg.id, nodeElem);
-            });
-            
-            nodeElem.addEventListener("touchend", (e) => {
-                e.preventDefault();
-                const holdTime = Date.now() - tapStartTime;
-                if (holdTime < 800) {
-                    const simulatedEvent = { 
-                        ctrlKey: false, 
-                        metaKey: false,
-                        preventDefault: () => {} 
-                    };
-                    handleNodeClick(treeId, nodeElem, simulatedEvent);
-                }
-                stopDowngradeTimer(nodeElem);
-            });
-            
-            nodeElem.addEventListener("touchcancel", (e) => {
-                stopDowngradeTimer(nodeElem);
-            });
+            // Detener downgrade si estaba activo
+            if (downgradeNodeId === cfg.id) {
+                stopDowngradeTimer(this);
+            }
         }
+    }, { passive: false });
+    
+    // TOUCH END
+    nodeElem.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        
+        if (!isDragging) {
+            // Fue un toque, no arrastre
+            const simulatedEvent = { 
+                ctrlKey: false, 
+                metaKey: false,
+                preventDefault: () => {} 
+            };
+            handleNodeClick(treeId, this, simulatedEvent);
+        }
+        
+        stopDowngradeTimer(this);
+        isDragging = false;
+    }, { passive: false });
+    
+    // TOUCH CANCEL
+    nodeElem.addEventListener('touchcancel', function(e) {
+        stopDowngradeTimer(this);
+        isDragging = false;
+    }, { passive: false });
+    
+    // EVENTOS DE MOUSE (para desktop)
+    nodeElem.addEventListener("mousedown", function(e) {
+        e.preventDefault();
+        startDowngradeTimer(treeId, cfg.id, this);
+    });
+    
+    nodeElem.addEventListener("mouseup", function(e) {
+        e.preventDefault();
+        const holdTime = Date.now() - tapStartTime;
+        if (holdTime < 800) {
+            handleNodeClick(treeId, this, e);
+        }
+        stopDowngradeTimer(this);
+    });
+    
+    nodeElem.addEventListener("mouseleave", function(e) {
+        stopDowngradeTimer(this);
+    });
+}
         
         container.appendChild(nodeElem);
     });
@@ -5300,7 +5513,7 @@ function saveStateToURL() {
         // Usar replaceState para no añadir entrada al historial
         window.history.replaceState({}, '', url);
         
-        console.log("💾 Estado guardado en URL (longitud:", compressed.length, "caracteres)");
+      //  console.log("💾 Estado guardado en URL (longitud:", compressed.length, "caracteres)");
         return true;
     } catch (e) {
         console.warn("⚠️ No se pudo guardar en URL:", e);
@@ -5687,7 +5900,7 @@ function saveStateToURL() {
         // Usar replaceState para no añadir entrada al historial
         window.history.replaceState({}, '', url);
         
-        console.log("💾 Estado guardado en URL (longitud:", compressed.length, "caracteres)");
+      //  console.log("💾 Estado guardado en URL (longitud:", compressed.length, "caracteres)");
         return true;
     } catch (e) {
         console.warn("⚠️ No se pudo guardar en URL:", e);
@@ -5774,6 +5987,253 @@ function initAutoSave() {
     
     console.log("🔄 Auto-save inicializado");
 }
+
+// ======================== MANEJAR ARRASTRES EN EL CONTENEDOR ===========================
+document.addEventListener('DOMContentLoaded', function() {
+    const treeContainers = document.querySelectorAll('.tree-container');
+    
+    treeContainers.forEach(container => {
+        container.addEventListener('touchmove', function(e) {
+            // Cuando hay arrastre en el contenedor (no en un nodo específico)
+            // Forzar actualización de todos los nodos visibles
+            const treeId = this.dataset.treeId;
+            if (treeId && isMobile) {
+                // Pequeño delay y luego forzar sincronización
+                setTimeout(() => {
+                    const state = treesState[treeId];
+                    if (state) {
+                        Object.keys(state.levels || {}).forEach(nodeId => {
+                            updateNodeDisplay(treeId, nodeId);
+                        });
+                    }
+                }, 50);
+            }
+        }, { passive: true }); // passive: true para mejor rendimiento
+    });
+});
+
+// ======================== SOLUCIÓN PARA DESAPARICIÓN VISUAL EN MÓVILES ===========================
+let isUpdatingVisuals = false;
+let pendingVisualUpdates = new Set();
+
+// Función para forzar actualización visual de un nodo
+function forceNodeVisualUpdate(treeId, nodeId) {
+    if (!isMobile) return;
+    
+    const elem = getNodeElement(treeId, nodeId);
+    if (!elem) return;
+    
+    pendingVisualUpdates.add(`${treeId}_${nodeId}`);
+    
+    if (isUpdatingVisuals) return;
+    
+    requestAnimationFrame(() => {
+        isUpdatingVisuals = true;
+        
+        pendingVisualUpdates.forEach(key => {
+            const [tId, nId] = key.split('_');
+            const element = getNodeElement(tId, nId);
+            if (element) {
+                // Trucos para forzar re-renderizado
+                element.style.transform = 'translate3d(0, 0, 0)';
+                void element.offsetWidth;
+                
+                const cfg = getNodeConfig(nId);
+                if (cfg) {
+                    const state = treesState[tId];
+                    const lvl = state.levels[nId];
+                    
+                    if (lvl) {
+                        const levelSpan = element.querySelector('.node-level');
+                        if (levelSpan) {
+                            levelSpan.textContent = `${lvl.current}/${cfg.max}`;
+                            levelSpan.style.opacity = '0.999';
+                            void levelSpan.offsetWidth;
+                            levelSpan.style.opacity = '';
+                        }
+                        
+                        const costSpan = element.querySelector('.cost');
+                        if (costSpan) {
+                            const currentCost = calculateCurrentCost(nId, lvl.current);
+                            costSpan.textContent = `C:${currentCost}`;
+                            costSpan.style.willChange = 'contents';
+                            void costSpan.offsetWidth;
+                            costSpan.style.willChange = '';
+                        }
+                    }
+                }
+                
+                setTimeout(() => {
+                    element.style.transform = '';
+                }, 50);
+            }
+        });
+        
+        pendingVisualUpdates.clear();
+        isUpdatingVisuals = false;
+    });
+}
+
+// Verificar si un elemento está en el viewport
+function isElementInViewport(el) {
+    const rect = el.getBoundingClientRect();
+    return (
+        rect.top <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.bottom >= 0 &&
+        rect.left <= (window.innerWidth || document.documentElement.clientWidth) &&
+        rect.right >= 0
+    );
+}
+
+// Sincronización visual completa de un árbol
+function forceSyncTreeVisuals(treeId) {
+    if (!isMobile) return;
+    
+    const state = treesState[treeId];
+    if (!state || !state.levels) return;
+    
+    Object.keys(state.levels).forEach(nodeId => {
+        forceNodeVisualUpdate(treeId, nodeId);
+    });
+    
+    const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
+    if (container) {
+        const links = container.querySelectorAll('.link');
+        links.forEach(link => {
+            link.style.transform = link.style.transform;
+        });
+    }
+}
+
+// ======================== FORZAR VISUALIZACIÓN DURANTE ARRASTRE ===========================
+function forceNodeDisplayDuringDrag(treeId, nodeId) {
+    if (!isMobile) return;
+    
+    const elem = getNodeElement(treeId, nodeId);
+    if (!elem) return;
+    
+    // 1. Aplicar transform 3D para forzar capa GPU
+    elem.style.transform = 'translate3d(0, 0, 0)';
+    
+    // 2. Forzar todos los spans a ser visibles
+    const spans = elem.querySelectorAll('span');
+    spans.forEach(span => {
+        span.style.opacity = '1';
+        span.style.visibility = 'visible';
+        span.style.display = 'inline-block';
+        // Truco para Chrome/Android
+        span.style.willChange = 'contents';
+    });
+    
+    // 3. Forzar reflow
+    void elem.offsetWidth;
+    
+    // 4. Actualizar contenido
+    updateNodeDisplay(treeId, nodeId);
+    
+    // 5. Restaurar después de un frame
+    requestAnimationFrame(() => {
+        spans.forEach(span => {
+            span.style.willChange = 'auto';
+        });
+        elem.style.transform = '';
+    });
+}
+
+// ======================== DETECTOR DE SCROLL/ARRAS TRE ===========================
+let lastScrollTime = 0;
+const SCROLL_DEBOUNCE = 100;
+
+function setupScrollObserver() {
+    const containers = document.querySelectorAll('.tree-container-wrapper, .tree-container');
+    
+    containers.forEach(container => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const treeId = entry.target.closest('.tree-container')?.dataset.treeId;
+                    if (treeId) {
+                        setTimeout(() => {
+                            forceSyncTreeVisuals(treeId);
+                        }, 50);
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        observer.observe(container);
+    });
+    
+    window.addEventListener('scroll', () => {
+        const now = Date.now();
+        if (now - lastScrollTime > SCROLL_DEBOUNCE) {
+            lastScrollTime = now;
+            
+            setTimeout(() => {
+                ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+                    const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
+                    if (container && isElementInViewport(container)) {
+                        forceSyncTreeVisuals(treeId);
+                    }
+                });
+            }, 100);
+        }
+    }, { passive: true });
+}
+
+// ======================== MANEJO GLOBAL DE SCROLL/ARRASTRE ===========================
+document.addEventListener('DOMContentLoaded', function() {
+    // Agregar eventos al contenedor principal
+    const treeContainers = document.querySelectorAll('.tree-container-wrapper');
+    
+    treeContainers.forEach(container => {
+        // PREVENIR COMPORTAMIENTO POR DEFECTO DEL ARRASTRE
+        container.addEventListener('touchmove', function(e) {
+            // Solo prevenir si estamos dentro del árbol
+            if (isMobile) {
+                e.preventDefault();
+                
+                // Forzar actualización de todos los nodos visibles
+                const treeId = this.querySelector('.tree-container')?.dataset.treeId;
+                if (treeId) {
+                    forceSyncTreeVisuals(treeId);
+                    
+                    // También forzar reflow del contenedor
+                    this.style.transform = 'translate3d(0, 0, 0)';
+                    void this.offsetWidth;
+                    this.style.transform = '';
+                }
+            }
+        }, { passive: false });
+        
+        // También prevenir el scroll inercial
+        container.addEventListener('scroll', function(e) {
+            if (isMobile) {
+                // Forzar re-renderizado después del scroll
+                setTimeout(() => {
+                    const treeId = this.querySelector('.tree-container')?.dataset.treeId;
+                    if (treeId) {
+                        forceSyncTreeVisuals(treeId);
+                    }
+                }, 50);
+            }
+        });
+    });
+    
+    // Evento global para cuando se suelta el arrastre
+    document.addEventListener('touchend', function(e) {
+        if (isMobile) {
+            // Pequeño delay y luego forzar actualización completa
+            setTimeout(() => {
+                const activeTab = document.querySelector('.tab-button.active');
+                if (activeTab && activeTab.dataset.tab !== 'about') {
+                    const treeId = activeTab.dataset.tab;
+                    forceSyncTreeVisuals(treeId);
+                }
+            }, 100);
+        }
+    }, { passive: true });
+});
 
 </script>
 </body>
