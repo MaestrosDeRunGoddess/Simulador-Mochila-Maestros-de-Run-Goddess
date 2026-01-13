@@ -3542,14 +3542,32 @@ if (techPoints < upgradeCost) {
     setLog(`Necesitas ${upgradeCost} puntos de tecnologia.`);
     return false;
 }
-
-techPoints -= upgradeCost;
-totalPointsSpent += upgradeCost;
     
     // Verificar si es final y hay puntos disponibles
     if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
         setLog("No quedan Daños Finales disponibles.");
         return false;
+    }
+    
+    // Verificar rama bloqueada
+    if (cfg.branch && cfg.type !== "final") {
+        const lockedBranch = state.lockedBranch;
+        const finalNodeId = cfg.branch + "-final";
+        const finalNode = state.levels[finalNodeId];
+        const hasCompletedFinal = finalNode && finalNode.current > 0;
+        
+        if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
+            setLog("Otra rama bloquea esta.");
+            return false;
+        }
+    }
+    
+    // Aplicar upgrade (SOLO UNA VEZ)
+    techPoints -= upgradeCost;
+    totalPointsSpent += upgradeCost;
+    
+    if (cfg.type === "final") {
+        globalFinalPointsLeft -= 1;
     }
     
     // Verificar rama bloqueada
@@ -4536,36 +4554,57 @@ saveBtn.addEventListener('click', () => {
     console.log('Sistema de builds inicializado correctamente');
 }
 
-// Obtener todas las builds guardadas
+// Obtener todas las builds guardadas (VERSIÓN ROBUSTA)
 function getSavedBuilds() {
     const builds = [];
     
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('tech_tree_build_')) {
-            try {
-                const data = JSON.parse(localStorage.getItem(key));
-                builds.push({
-                    name: key.replace('tech_tree_build_', ''),
-                    timestamp: data.timestamp || 'Sin fecha',
-                    totalPoints: data.totalPointsSpent || 0
-                });
-            } catch (e) {
-                console.error('Error cargando build:', key, e);
+    try {
+        // Verificar si localStorage está disponible
+        if (typeof localStorage === 'undefined' || localStorage === null) {
+            console.warn("⚠️ localStorage no disponible (GitHub Pages)");
+            return builds;
+        }
+        
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('tech_tree_build_')) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    builds.push({
+                        name: key.replace('tech_tree_build_', ''),
+                        timestamp: data.timestamp || 'Sin fecha',
+                        totalPoints: data.totalPointsSpent || 0
+                    });
+                } catch (e) {
+                    console.error(`Error cargando build ${key}:`, e);
+                    // Intentar limpiar datos corruptos
+                    localStorage.removeItem(key);
+                }
             }
         }
+        
+        // Ordenar por timestamp (más reciente primero)
+        builds.sort((a, b) => {
+            if (!a.timestamp) return 1;
+            if (!b.timestamp) return -1;
+            return b.timestamp.localeCompare(a.timestamp);
+        });
+        
+    } catch (e) {
+        console.error("❌ Error crítico en getSavedBuilds:", e);
+        // Crear storage en memoria como fallback
+        if (!window.fallbackStorage) window.fallbackStorage = {};
     }
-    
-    // Ordenar por timestamp (más reciente primero)
-    builds.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     
     return builds;
 }
 
-// Guardar la build actual
+// Guardar la build actual (VERSIÓN ROBUSTA)
 function saveBuild(buildName) {
     try {
-        // Función para convertir Set a Array para serialización
+        console.log(`💾 Intentando guardar build "${buildName}"...`);
+        
+        // 1. Preparar datos
         function prepareStateForSave(state) {
             const serializableState = {
                 levels: state.levels || {},
@@ -4576,44 +4615,131 @@ function saveBuild(buildName) {
         }
         
         const buildData = {
-            // Estado de todos los árboles (serializable)
             guardian: prepareStateForSave(treesState.guardian),
             vanguardia: prepareStateForSave(treesState.vanguardia),
             canon: prepareStateForSave(treesState.canon),
-            
-            // Recursos globales
             techPoints: techPoints,
             globalFinalPointsLeft: globalFinalPointsLeft,
             totalPointsSpent: totalPointsSpent,
-            
-            // Metadata
             timestamp: new Date().toLocaleString(),
-            version: '1.0'
+            version: '2.0',
+            lastSave: Date.now()
         };
         
-        localStorage.setItem(`tech_tree_build_${buildName}`, JSON.stringify(buildData));
+        // 2. Intentar guardar en localStorage
+        let savedToLocalStorage = false;
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage !== null) {
+                localStorage.setItem(`tech_tree_build_${buildName}`, JSON.stringify(buildData));
+                savedToLocalStorage = true;
+                console.log("✅ Guardado en localStorage");
+            }
+        } catch (lsError) {
+            console.warn("⚠️ localStorage falló:", lsError);
+        }
+        
+        // 3. FALLBACK: Guardar en sessionStorage
+        let savedToSessionStorage = false;
+        if (!savedToLocalStorage) {
+            try {
+                if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.setItem(`tech_tree_build_${buildName}`, JSON.stringify(buildData));
+                    savedToSessionStorage = true;
+                    console.log("✅ Guardado en sessionStorage (fallback)");
+                }
+            } catch (ssError) {
+                console.warn("⚠️ sessionStorage también falló:", ssError);
+            }
+        }
+        
+        // 4. FALLBACK 2: Guardar en memoria
+        if (!savedToLocalStorage && !savedToSessionStorage) {
+            if (!window.fallbackStorage) window.fallbackStorage = {};
+            window.fallbackStorage[`tech_tree_build_${buildName}`] = buildData;
+            console.log("✅ Guardado en memoria (fallback final)");
+        }
+        
+        // 5. También guardar en URL (para GitHub Pages)
+        try {
+            saveStateToURL();
+            console.log("✅ Estado también guardado en URL");
+        } catch (urlError) {
+            console.warn("⚠️ No se pudo guardar en URL:", urlError);
+        }
+        
+        // 6. Actualizar contador de builds
+        updateBuildsCounter();
+        
         return true;
+        
     } catch (e) {
-        console.error('Error guardando build:', e);
-        setLog('Error al guardar la build.');
+        console.error("❌ Error fatal en saveBuild:", e);
+        setLog("❌ Error crítico al guardar. Intenta exportar como archivo.");
         return false;
     }
 }
 
-// Cargar una build (VERSIÓN CORREGIDA - ORDEN CORRECTO)
+// Cargar una build (VERSIÓN ROBUSTA PARA GITHUB PAGES)
 function loadBuild(buildName) {
     try {
-        console.log(`📂 Cargando build "${buildName}"...`);
+        console.log(`📂 Intentando cargar build "${buildName}"...`);
         
-        const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
-        if (!savedData) {
-            setLog(`Build "${buildName}" no encontrada.`);
-            console.error("❌ Build no encontrada en localStorage");
+        let buildData = null;
+        let source = "none";
+        
+        // INTENTAR MULTIPLES FUENTES EN ORDEN:
+        
+        // 1. localStorage
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage !== null) {
+                const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
+                if (savedData) {
+                    buildData = JSON.parse(savedData);
+                    source = "localStorage";
+                    console.log("✅ Encontrado en localStorage");
+                }
+            }
+        } catch (lsError) {
+            console.warn("localStorage falló:", lsError);
+        }
+        
+        // 2. sessionStorage (fallback)
+        if (!buildData) {
+            try {
+                if (typeof sessionStorage !== 'undefined') {
+                    const savedData = sessionStorage.getItem(`tech_tree_build_${buildName}`);
+                    if (savedData) {
+                        buildData = JSON.parse(savedData);
+                        source = "sessionStorage";
+                        console.log("✅ Encontrado en sessionStorage");
+                    }
+                }
+            } catch (ssError) {
+                console.warn("sessionStorage falló:", ssError);
+            }
+        }
+        
+        // 3. Memoria (fallback final)
+        if (!buildData && window.fallbackStorage) {
+            buildData = window.fallbackStorage[`tech_tree_build_${buildName}`];
+            if (buildData) {
+                source = "memory";
+                console.log("✅ Encontrado en memoria");
+            }
+        }
+        
+        // 4. Si no se encuentra en ningún lado
+        if (!buildData) {
+            setLog(`❌ Build "${buildName}" no encontrada en ningún almacenamiento.`);
+            console.error("Build no encontrada en:", {
+                localStorage: typeof localStorage,
+                sessionStorage: typeof sessionStorage,
+                fallbackStorage: !!window.fallbackStorage
+            });
             return false;
         }
         
-        const buildData = JSON.parse(savedData);
-        console.log("✅ Datos parseados:", Object.keys(buildData));
+        console.log(`✅ Build cargada desde: ${source}`);
         
         // CORRECCIÓN: Convertir unlockedNodes de Array a Set
         function fixUnlockedNodes(state) {
@@ -4652,13 +4778,13 @@ function loadBuild(buildName) {
         console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
         console.log(`   • Puntos gastados: ${totalPointsSpent}`);
         
-        // 3. RE-CREAR VISUALES DE ÁRBOLES (sin resetear datos)
+        // 3. RE-CREAR VISUALES DE ÁRBOLES
         console.log("3. Recreando árboles visualmente...");
         ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
             reinitTreePreservingData(treeId);
         });
         
-        // 4. ACTUALIZAR UI GLOBAL (DESPUÉS de tener datos)
+        // 4. ACTUALIZAR UI GLOBAL
         console.log("4. Actualizando UI global...");
         updateGlobalUI();
         
@@ -4677,13 +4803,22 @@ function loadBuild(buildName) {
         console.log("6. Actualizando estadísticas...");
         updateSpecificStatsDisplay();
         
-        setLog(`✅ Build "${buildName}" cargada correctamente.`);
+        setLog(`✅ Build "${buildName}" cargada desde ${source}.`);
         console.log("✅ Build cargada exitosamente");
+        
+        // Guardar automáticamente en localStorage si se cargó de otra fuente
+        if (source !== "localStorage") {
+            setTimeout(() => {
+                console.log("🔄 Re-guardando en localStorage...");
+                saveBuild(buildName);
+            }, 1000);
+        }
+        
         return true;
         
     } catch (e) {
-        console.error('❌ Error cargando build:', e);
-        setLog('Error al cargar la build. Verifica la consola.');
+        console.error('❌ Error crítico en loadBuild:', e);
+        setLog('❌ Error al cargar la build. Los datos pueden estar corruptos.');
         return false;
     }
 }
@@ -4871,10 +5006,369 @@ function reinitTreePreservingData(treeId) {
     refreshAllowedDisplays(treeId);
 }
 
-// Eliminar una build
+// Eliminar una build (de TODAS las fuentes)
 function deleteBuild(buildName) {
-    localStorage.removeItem(`tech_tree_build_${buildName}`);
+    console.log(`🗑️  Eliminando build "${buildName}" de todas las fuentes...`);
+    
+    // 1. localStorage
+    try {
+        if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem(`tech_tree_build_${buildName}`);
+            console.log("✅ Eliminado de localStorage");
+        }
+    } catch (e) {
+        console.warn("No se pudo eliminar de localStorage:", e);
+    }
+    
+    // 2. sessionStorage
+    try {
+        if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.removeItem(`tech_tree_build_${buildName}`);
+            console.log("✅ Eliminado de sessionStorage");
+        }
+    } catch (e) {
+        console.warn("No se pudo eliminar de sessionStorage:", e);
+    }
+    
+    // 3. Memoria
+    try {
+        if (window.fallbackStorage) {
+            delete window.fallbackStorage[`tech_tree_build_${buildName}`];
+            console.log("✅ Eliminado de memoria");
+        }
+    } catch (e) {
+        console.warn("No se pudo eliminar de memoria:", e);
+    }
+    
+    // Actualizar contador
+    updateBuildsCounter();
 }
+
+// ======================== SISTEMA DE AUTO-SAVE EN URL ===========================
+// Para GitHub Pages donde localStorage puede fallar
+
+// Guardar estado en URL como parámetro
+function saveStateToURL() {
+    try {
+        // Crear objeto compacto del estado
+        const stateToSave = {
+            g: treesState.guardian.levels,
+            v: treesState.vanguardia.levels,
+            c: treesState.canon.levels,
+            tp: techPoints,
+            fp: globalFinalPointsLeft,
+            t: Date.now()
+        };
+        
+        // Convertir a string base64
+        const stateString = JSON.stringify(stateToSave);
+        const compressed = btoa(stateString); // Base64 simple
+        
+        // Actualizar URL sin recargar la página
+        const url = new URL(window.location);
+        url.searchParams.set('state', compressed);
+        
+        // Usar replaceState para no añadir entrada al historial
+        window.history.replaceState({}, '', url);
+        
+        console.log("💾 Estado guardado en URL (longitud:", compressed.length, "caracteres)");
+        return true;
+    } catch (e) {
+        console.warn("⚠️ No se pudo guardar en URL:", e);
+        return false;
+    }
+}
+
+// Cargar estado desde URL
+function loadStateFromURL() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const stateParam = urlParams.get('state');
+        
+        if (!stateParam) {
+            console.log("ℹ️ No hay estado en la URL");
+            return false;
+        }
+        
+        // Decodificar base64
+        const stateString = atob(stateParam);
+        const savedState = JSON.parse(stateString);
+        
+        console.log("📂 Estado encontrado en URL, cargando...");
+        
+        // Restaurar niveles (estructura simple)
+        if (savedState.g) treesState.guardian.levels = savedState.g;
+        if (savedState.v) treesState.vanguardia.levels = savedState.v;
+        if (savedState.c) treesState.canon.levels = savedState.c;
+        
+        // Restaurar recursos
+        if (savedState.tp !== undefined) techPoints = savedState.tp;
+        if (savedState.fp !== undefined) globalFinalPointsLeft = savedState.fp;
+        
+        // Forzar recreación visual
+        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+            reinitTreePreservingData(treeId);
+        });
+        
+        updateGlobalUI();
+        
+        console.log("✅ Estado cargado desde URL");
+        setLog("✅ Estado cargado desde URL automáticamente.");
+        
+        // Limpiar URL después de cargar
+        setTimeout(() => {
+            const url = new URL(window.location);
+            url.searchParams.delete('state');
+            window.history.replaceState({}, '', url);
+        }, 1000);
+        
+        return true;
+    } catch (e) {
+        console.warn("⚠️ Error cargando desde URL:", e);
+        return false;
+    }
+}
+
+// Auto-save cada 30 segundos y al cambiar pestaña
+function initAutoSave() {
+    // Auto-save periódico
+    setInterval(() => {
+        saveStateToURL();
+    }, 30000); // 30 segundos
+    
+    // Auto-save al cambiar pestaña/cerrar
+    window.addEventListener('beforeunload', () => {
+        saveStateToURL();
+    });
+    
+    // Auto-save al hacer cambios importantes
+    const originalPerformSingleUpgrade = performSingleUpgrade;
+    performSingleUpgrade = function(...args) {
+        const result = originalPerformSingleUpgrade.apply(this, args);
+        if (result) {
+            setTimeout(saveStateToURL, 500);
+        }
+        return result;
+    };
+    
+    // Cargar estado de la URL al iniciar
+    setTimeout(() => {
+        loadStateFromURL();
+    }, 1000);
+    
+    console.log("🔄 Auto-save inicializado");
+}
+
+// ======================== EXPORTAR/IMPORTAR COMO ARCHIVO ===========================
+// Para respaldo externo (funciona en GitHub Pages)
+
+function exportBuildToFile(buildName = null) {
+    try {
+        // Si no se especifica nombre, usar fecha
+        const fileName = buildName || `build_${new Date().toISOString().slice(0, 10)}_${Date.now()}`;
+        
+        // Preparar datos
+        function prepareStateForSave(state) {
+            return {
+                levels: state.levels || {},
+                lockedBranch: state.lockedBranch || null,
+                unlockedNodes: state.unlockedNodes ? Array.from(state.unlockedNodes) : []
+            };
+        }
+        
+        const exportData = {
+            guardian: prepareStateForSave(treesState.guardian),
+            vanguardia: prepareStateForSave(treesState.vanguardia),
+            canon: prepareStateForSave(treesState.canon),
+            techPoints: techPoints,
+            globalFinalPointsLeft: globalFinalPointsLeft,
+            totalPointsSpent: totalPointsSpent,
+            timestamp: new Date().toISOString(),
+            version: '2.0',
+            metadata: {
+                totalLevels: document.getElementById('total-levels').textContent,
+                totalFinalNodes: document.getElementById('total-final-nodes').textContent,
+                exportDate: new Date().toLocaleString()
+            }
+        };
+        
+        // Crear blob JSON
+        const jsonStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        
+        // Crear enlace de descarga
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fileName}.mrgbuild`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Limpiar
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        console.log(`📤 Build exportada como: ${fileName}.mrgbuild`);
+        setLog(`✅ Build exportada como archivo.`);
+        
+        return true;
+    } catch (e) {
+        console.error("❌ Error exportando:", e);
+        setLog("❌ Error al exportar.");
+        return false;
+    }
+}
+
+function importBuildFromFile(event) {
+    return new Promise((resolve, reject) => {
+        const file = event.target.files[0];
+        if (!file) {
+            reject("No se seleccionó archivo");
+            return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                const buildData = JSON.parse(e.target.result);
+                console.log("📥 Archivo importado:", buildData.metadata || buildData.timestamp);
+                
+                // Usar la misma lógica de loadBuild pero con datos del archivo
+                function fixUnlockedNodes(state) {
+                    if (!state) return { levels: {}, lockedBranch: null, unlockedNodes: new Set() };
+                    
+                    return {
+                        levels: state.levels || {},
+                        lockedBranch: state.lockedBranch || null,
+                        unlockedNodes: state.unlockedNodes ? new Set(state.unlockedNodes) : new Set()
+                    };
+                }
+                
+                // Restaurar datos
+                treesState.guardian = fixUnlockedNodes(buildData.guardian);
+                treesState.vanguardia = fixUnlockedNodes(buildData.vanguardia);
+                treesState.canon = fixUnlockedNodes(buildData.canon);
+                
+                techPoints = buildData.techPoints !== undefined ? buildData.techPoints : 9999999;
+                globalFinalPointsLeft = buildData.globalFinalPointsLeft !== undefined ? buildData.globalFinalPointsLeft : 3;
+                totalPointsSpent = buildData.totalPointsSpent || 0;
+                
+                // Recrear visuales
+                ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+                    reinitTreePreservingData(treeId);
+                });
+                
+                updateGlobalUI();
+                updateSpecificStatsDisplay();
+                
+                // Guardar también en localStorage con nombre basado en archivo
+                const buildName = `imported_${new Date().toISOString().slice(0, 10)}`;
+                setTimeout(() => saveBuild(buildName), 500);
+                
+                console.log("✅ Build importada exitosamente");
+                setLog(`✅ Build importada desde archivo y guardada como "${buildName}".`);
+                
+                resolve(true);
+            } catch (error) {
+                console.error("❌ Error importando archivo:", error);
+                setLog("❌ Archivo corrupto o inválido.");
+                reject(error);
+            }
+        };
+        
+        reader.onerror = function() {
+            console.error("❌ Error leyendo archivo");
+            setLog("❌ Error leyendo archivo.");
+            reject("Error reading file");
+        };
+        
+        reader.readAsText(file);
+    });
+}
+
+// Función para agregar botones de export/import a la UI
+function addExportImportButtons() {
+    const buildSection = document.querySelector('.buttons-container');
+    if (!buildSection) return;
+    
+    // Crear contenedor
+    const exportImportDiv = document.createElement('div');
+    exportImportDiv.style.marginTop = '15px';
+    exportImportDiv.style.borderTop = '1px solid #444';
+    exportImportDiv.style.paddingTop = '10px';
+    exportImportDiv.style.textAlign = 'center';
+    
+    exportImportDiv.innerHTML = `
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button id="export-build" style="background: #00ce9d; border: none; padding: 8px 15px; 
+                    border-radius: 4px; color: white; cursor: pointer; font-size: 12px;">
+                📤 Exportar Build
+            </button>
+            
+            <label for="import-file" style="background: #9d4edd; border: none; padding: 8px 15px; 
+                    border-radius: 4px; color: white; cursor: pointer; font-size: 12px; display: inline-block;">
+                📥 Importar Build
+                <input type="file" id="import-file" accept=".json,.mrgbuild" 
+                       style="display: none;">
+            </label>
+        </div>
+        <div style="font-size: 10px; color: #888; margin-top: 5px;">
+            Para respaldo externo (recomendado para GitHub Pages)
+        </div>
+    `;
+    
+    buildSection.appendChild(exportImportDiv);
+    
+    // Eventos
+    document.getElementById('export-build').addEventListener('click', () => {
+        const buildName = prompt('Nombre para el archivo de exportación:', 
+                                `build_${new Date().toISOString().slice(0, 10)}`);
+        if (buildName) {
+            exportBuildToFile(buildName);
+        }
+    });
+    
+    document.getElementById('import-file').addEventListener('change', (e) => {
+        importBuildFromFile(e).then(() => {
+            e.target.value = ''; // Reset input
+        }).catch(err => {
+            console.error("Import falló:", err);
+            e.target.value = ''; // Reset input
+        });
+    });
+}
+
+// Actualizar contador de builds en UI
+function updateBuildsCounter() {
+    try {
+        const builds = getSavedBuilds();
+        const counterEl = document.getElementById('builds-counter');
+        
+        if (!counterEl) {
+            // Crear elemento si no existe
+            const loadBtn = document.getElementById('load-builds-toggle');
+            if (loadBtn) {
+                const counter = document.createElement('span');
+                counter.id = 'builds-counter';
+                counter.style.marginLeft = '8px';
+                counter.style.fontSize = '11px';
+                counter.style.color = '#00ce9d';
+                counter.textContent = `(${builds.length})`;
+                loadBtn.parentNode.insertBefore(counter, loadBtn.nextSibling);
+            }
+        } else {
+            counterEl.textContent = `(${builds.length})`;
+        }
+        
+        console.log(`📊 Total builds disponibles: ${builds.length}`);
+    } catch (e) {
+        console.warn("No se pudo actualizar contador:", e);
+    }
+}
+
 // FUNCIÓN DE DIAGNÓSTICO DEL SISTEMA DE BUILDS
 function diagnoseBuildSystem() {
     console.log("🔍 ===== DIAGNÓSTICO SISTEMA BUILDS =====");
@@ -4936,6 +5430,121 @@ function diagnoseBuildSystem() {
 
 // Hacer disponible en consola
 window.diagnoseBuilds = diagnoseBuildSystem;
+
+// ======================== SISTEMA DE AUTO-SAVE EN URL ===========================
+// Para GitHub Pages donde localStorage puede fallar
+
+// Guardar estado en URL como parámetro
+function saveStateToURL() {
+    try {
+        // Crear objeto compacto del estado
+        const stateToSave = {
+            g: treesState.guardian.levels,
+            v: treesState.vanguardia.levels,
+            c: treesState.canon.levels,
+            tp: techPoints,
+            fp: globalFinalPointsLeft,
+            t: Date.now()
+        };
+        
+        // Convertir a string base64
+        const stateString = JSON.stringify(stateToSave);
+        const compressed = btoa(stateString); // Base64 simple
+        
+        // Actualizar URL sin recargar la página
+        const url = new URL(window.location);
+        url.searchParams.set('state', compressed);
+        
+        // Usar replaceState para no añadir entrada al historial
+        window.history.replaceState({}, '', url);
+        
+        console.log("💾 Estado guardado en URL (longitud:", compressed.length, "caracteres)");
+        return true;
+    } catch (e) {
+        console.warn("⚠️ No se pudo guardar en URL:", e);
+        return false;
+    }
+}
+
+// Cargar estado desde URL
+function loadStateFromURL() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const stateParam = urlParams.get('state');
+        
+        if (!stateParam) {
+            console.log("ℹ️ No hay estado en la URL");
+            return false;
+        }
+        
+        // Decodificar base64
+        const stateString = atob(stateParam);
+        const savedState = JSON.parse(stateString);
+        
+        console.log("📂 Estado encontrado en URL, cargando...");
+        
+        // Restaurar niveles (estructura simple)
+        if (savedState.g) treesState.guardian.levels = savedState.g;
+        if (savedState.v) treesState.vanguardia.levels = savedState.v;
+        if (savedState.c) treesState.canon.levels = savedState.c;
+        
+        // Restaurar recursos
+        if (savedState.tp !== undefined) techPoints = savedState.tp;
+        if (savedState.fp !== undefined) globalFinalPointsLeft = savedState.fp;
+        
+        // Forzar recreación visual
+        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+            reinitTreePreservingData(treeId);
+        });
+        
+        updateGlobalUI();
+        
+        console.log("✅ Estado cargado desde URL");
+        setLog("✅ Estado cargado desde URL automáticamente.");
+        
+        // Limpiar URL después de cargar
+        setTimeout(() => {
+            const url = new URL(window.location);
+            url.searchParams.delete('state');
+            window.history.replaceState({}, '', url);
+        }, 1000);
+        
+        return true;
+    } catch (e) {
+        console.warn("⚠️ Error cargando desde URL:", e);
+        return false;
+    }
+}
+
+// Auto-save cada 30 segundos y al cambiar pestaña
+function initAutoSave() {
+    // Auto-save periódico
+    setInterval(() => {
+        saveStateToURL();
+    }, 30000); // 30 segundos
+    
+    // Auto-save al cambiar pestaña/cerrar
+    window.addEventListener('beforeunload', () => {
+        saveStateToURL();
+    });
+    
+    // Auto-save al hacer cambios importantes
+    const originalPerformSingleUpgrade = performSingleUpgrade;
+    performSingleUpgrade = function(...args) {
+        const result = originalPerformSingleUpgrade.apply(this, args);
+        if (result) {
+            setTimeout(saveStateToURL, 500);
+        }
+        return result;
+    };
+    
+    // Cargar estado de la URL al iniciar
+    setTimeout(() => {
+        loadStateFromURL();
+    }, 1000);
+    
+    console.log("🔄 Auto-save inicializado");
+}
 </script>
 </body>
 </html>
