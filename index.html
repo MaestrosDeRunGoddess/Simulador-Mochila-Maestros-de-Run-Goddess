@@ -3449,15 +3449,27 @@ function handleNodeClick(treeId, nodeElem, e) {
     lastClickedNodeId = nodeId;
     lastClickedTreeId = treeId;
     
+    let result = false;
+    
     // DOBLE CLICK: Subir nodo + padres a hitos
     if (isDoubleClick && cfg.type !== 'root') {
         e.preventDefault();
-        return handleDoubleClickMilestoneChain(treeId, nodeId);
+        result = handleDoubleClickMilestoneChain(treeId, nodeId);
     } 
     // CLICK SIMPLE: Comportamiento normal
     else {
-        return handleNodeUpgradeNormal(treeId, nodeElem);
+        result = handleNodeUpgradeNormal(treeId, nodeElem);
     }
+    
+    // FORZAR SINCRONIZACIÓN DESPUÉS DE CUALQUIER CLICK EXITOSO
+    if (result) {
+        setTimeout(() => {
+            forceSyncAllTrees();
+            saveStateToURL(); // Guardar también en URL
+        }, 50);
+    }
+    
+    return result;
 }
 
 // Función de upgrade normal (1 nivel con auto-padres)
@@ -3522,7 +3534,7 @@ function performSingleDowngradeWithChildPull(treeId, nodeId) {
     }
 }
 
-// ORIGINAL: Función de upgrade simple (para padres)
+// ======================== UPGRADE BÁSICO CORREGIDO ===========================
 function performSingleUpgrade(treeId, nodeId) {
     const state = treesState[treeId];
     const cfg = getNodeConfig(nodeId);
@@ -3530,86 +3542,86 @@ function performSingleUpgrade(treeId, nodeId) {
     
     if (!cfg || !lvl) return false;
     
-
-// Calcular costo para subir de nivel 'current' a 'current+1'
-
-const costCurrent = calculateCurrentCost(nodeId, lvl.current);
-const costNext = calculateCurrentCost(nodeId, lvl.current + 1);
-const upgradeCost = costNext - costCurrent;
-
-// Luego usar 'upgradeCost' en lugar de 'currentCost':
-if (techPoints < upgradeCost) {
-    setLog(`Necesitas ${upgradeCost} puntos de tecnologia.`);
-    return false;
-}
+    // 1. Calcular costo CORRECTAMENTE
+    const costToUpgrade = calculateCurrentCost(nodeId, lvl.current);
     
-    // Verificar si es final y hay puntos disponibles
+    // 2. Verificar si alcanzó el máximo
+    if (lvl.current >= cfg.max) {
+        setLog("Límite alcanzado.");
+        return false;
+    }
+    
+    // 3. Verificar puntos
+    if (techPoints < costToUpgrade) {
+        setLog(`Necesitas ${costToUpgrade} puntos de tecnologia.`);
+        return false;
+    }
+    
+    // 4. Verificar rama bloqueada (excepto nodos finales)
+    if (cfg.branch && cfg.type !== "final") {
+        const lockedBranch = state.lockedBranch;
+        const finalNodeId = cfg.branch + "-final";
+        const finalNode = state.levels[finalNodeId];
+        const hasCompletedFinal = finalNode && finalNode.current > 0;
+        
+        if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
+            setLog("Otra rama bloquea esta.");
+            return false;
+        }
+    }
+    
+    // 5. Verificar si es final y hay puntos globales
     if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
         setLog("No quedan Daños Finales disponibles.");
         return false;
     }
     
-    // Verificar rama bloqueada
-    if (cfg.branch && cfg.type !== "final") {
-        const lockedBranch = state.lockedBranch;
-        const finalNodeId = cfg.branch + "-final";
-        const finalNode = state.levels[finalNodeId];
-        const hasCompletedFinal = finalNode && finalNode.current > 0;
-        
-        if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
-            setLog("Otra rama bloquea esta.");
-            return false;
-        }
+    // 6. VERIFICAR LÍMITE DE PADRES (MUY IMPORTANTE)
+    const allowedMax = getAllowedMaxForNode(treeId, nodeId);
+    if (lvl.current >= allowedMax) {
+        setLog("No puedes subir más por limitación de padres.");
+        return false;
     }
     
-    // Aplicar upgrade (SOLO UNA VEZ)
-    techPoints -= upgradeCost;
-    totalPointsSpent += upgradeCost;
-    
-    if (cfg.type === "final") {
-        globalFinalPointsLeft -= 1;
-    }
-    
-    // Verificar rama bloqueada
-    if (cfg.branch && cfg.type !== "final") {
-        const lockedBranch = state.lockedBranch;
-        const finalNodeId = cfg.branch + "-final";
-        const finalNode = state.levels[finalNodeId];
-        const hasCompletedFinal = finalNode && finalNode.current > 0;
-        
-        if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
-            setLog("Otra rama bloquea esta.");
-            return false;
-        }
-    }
-    
-    // Aplicar upgrade
-    techPoints -= upgradeCost;
-    totalPointsSpent += upgradeCost;
-    
-    if (cfg.type === "final") {
-        globalFinalPointsLeft -= 1;
-    }
-    
+    // 7. APLICAR UPGRADE
+    techPoints -= costToUpgrade;
+    totalPointsSpent += costToUpgrade;
     lvl.current += 1;
     
-    // SOLO el nodo principal (main) puede bloquear una rama cuando sube de nivel
-    if (cfg.branch && cfg.type === "main" && !state.lockedBranch) {
+    // 8. Si es nodo final, consumir punto global
+    if (cfg.type === "final") {
+        globalFinalPointsLeft -= 1;
+    }
+    
+    // 9. Si es nodo principal y es el PRIMER nivel, bloquear rama
+    if (cfg.branch && cfg.type === "main" && lvl.current === 1 && !state.lockedBranch) {
         const finalNodeId = cfg.branch + "-final";
         const finalNode = state.levels[finalNodeId];
         const hasCompletedFinal = finalNode && finalNode.current > 0;
         
         if (!hasCompletedFinal) {
             state.lockedBranch = cfg.branch;
+            console.log(`🔒 Rama ${cfg.branch} bloqueada por ${nodeId} nivel 1`);
         }
     }
     
-    // Actualizar visual
+    // 10. Si es nodo final completado, desbloquear rama
+    if (cfg.type === "final" && lvl.current >= 1) {
+        state.lockedBranch = null;
+        console.log(`🔓 Rama ${cfg.branch} desbloqueada (final completado)`);
+    }
+    
+    // 11. Actualizar visual
     updateNodeDisplay(treeId, nodeId);
-    updateNodeVisualState(treeId, nodeId); // NUEVO: actualizar estado visual
+    updateNodeVisualState(treeId, nodeId);
     updateGlobalUI();
     
-    // Log
+    // 12. Actualizar estado de desbloqueo si es necesario
+    if (!state.unlockedNodes.has(nodeId)) {
+        state.unlockedNodes.add(nodeId);
+    }
+    
+    // 13. Log
     const benefit = getStatinfoForNode(treeId, nodeId, 1);
     if (benefit) {
         setLog(`${cfg.title} subió a nivel ${lvl.current}. +${benefit.value}%`);
@@ -3617,55 +3629,60 @@ if (techPoints < upgradeCost) {
         setLog(`${cfg.title} subió a nivel ${lvl.current}.`);
     }
     
-    // Si es final y se completó, desbloquear rama
-    if (cfg.type === "final" && lvl.current >= 1) {
-        state.lockedBranch = null;
-    }
-    
+    // 14. Forzar actualización de todos los nodos relacionados
     refreshAllowedDisplays(treeId);
+    
+    // 15. Guardar estado en URL (para GitHub Pages)
+    setTimeout(saveStateToURL, 100);
+    
     return true;
 }
 
-// ORIGINAL: Función de downgrade simple (para padres)
+// ======================== DOWNGRADE BÁSICO CORREGIDO ===========================
 function performSingleDowngrade(treeId, nodeId) {
     const state = treesState[treeId];
     const cfg = getNodeConfig(nodeId);
     const lvl = state.levels[nodeId];
     
     if (!lvl || lvl.current <= 0) return false;
-
-// REEMPLAZAR CON:
-const costCurrent = calculateCurrentCost(nodeId, lvl.current);
-const costPrev = calculateCurrentCost(nodeId, lvl.current - 1);
-const refundAmount = costCurrent - costPrev;
     
-    // Aplicar refund
-    techPoints += refundAmount;
-    totalPointsSpent = Math.max(0, totalPointsSpent - refundAmount);
+    // 1. Calcular reembolso (costo del nivel actual)
+    const costToRefund = calculateCurrentCost(nodeId, lvl.current - 1);
     
-    // Si es final, devolver punto global
+    // 2. Aplicar reembolso
+    techPoints += costToRefund;
+    totalPointsSpent = Math.max(0, totalPointsSpent - costToRefund);
+    
+    // 3. Si es final, devolver punto global
     if (cfg.type === "final" && lvl.current >= 1) {
         globalFinalPointsLeft += 1;
     }
     
+    // 4. Bajar nivel
     lvl.current -= 1;
     
-    // SOLO el nodo principal (main) puede desbloquear una rama cuando baja a 0
+    // 5. Si nodo principal baja a 0, desbloquear rama
     if (cfg.branch && cfg.type === "main" && state.lockedBranch === cfg.branch) {
         if (lvl.current <= 0) {
             state.lockedBranch = null;
+            console.log(`🔓 Rama ${cfg.branch} desbloqueada (${nodeId} bajó a 0)`);
         }
     }
     
-    // Actualizar visual
+    // 6. Actualizar visual
     updateNodeDisplay(treeId, nodeId);
-    updateNodeVisualState(treeId, nodeId); // NUEVO: actualizar estado visual
+    updateNodeVisualState(treeId, nodeId);
     updateGlobalUI();
     
-    // Log
-    setLog(`Bajaste 1 nivel en ${cfg.title}. +${refundAmount} pts.`);
+    // 7. Log
+    setLog(`Bajaste 1 nivel en ${cfg.title}. +${costToRefund} pts.`);
     
+    // 8. Forzar actualización de hijos
     refreshAllowedDisplays(treeId);
+    
+    // 9. Guardar estado en URL
+    setTimeout(saveStateToURL, 100);
+    
     return true;
 }
 
@@ -4027,6 +4044,40 @@ function updateNodeDisplay(treeId, nodeId) {
     }
 }
 
+// ======================== SINCRONIZACIÓN FORZADA ===========================
+function forceSyncAllTrees() {
+    console.log("🔄 Forzando sincronización completa...");
+    
+    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+        const state = treesState[treeId];
+        const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
+        
+        if (!container) return;
+        
+        // 1. Para cada nodo en el estado
+        Object.keys(state.levels || {}).forEach(nodeId => {
+            const lvl = state.levels[nodeId];
+            const elem = container.querySelector(`.node[data-id="${nodeId}"]`);
+            
+            if (elem && lvl) {
+                // 2. Actualizar display numérico
+                updateNodeDisplay(treeId, nodeId);
+                
+                // 3. Actualizar estado visual
+                updateNodeVisualState(treeId, nodeId);
+            }
+        });
+        
+        // 4. Actualizar restricciones de rama
+        refreshAllowedDisplays(treeId);
+    });
+    
+    // 5. Actualizar UI global
+    updateGlobalUI();
+    
+    console.log("✅ Sincronización forzada completada");
+}
+
 function resetAll() {
     let totalRefund = 0;
     
@@ -4254,8 +4305,17 @@ window.addEventListener('resize', () => {
     }, 250); // Debounce de 250ms
 });
 
-resetAllBtn.addEventListener("click", resetAll);
-resetCurrentBtn.addEventListener("click", resetCurrentTab);
+resetAllBtn.addEventListener("click", () => {
+    resetAll();
+    // Forzar sincronización después de reset
+    setTimeout(forceSyncAllTrees, 100);
+});
+
+resetCurrentBtn.addEventListener("click", () => {
+    resetCurrentTab();
+    // Forzar sincronización después de reset
+    setTimeout(forceSyncAllTrees, 100);
+});
 
 // Detener downgrade si se hace clic fuera
 document.addEventListener("mouseup", () => {
@@ -4312,9 +4372,31 @@ window.addEventListener('load', () => {
     
     setTimeout(() => {
         initTranslation();
-        
-        // AÑADIR AQUÍ la inicialización del sistema de builds
         initBuildSystem();
+        initAutoSave();
+        
+        // DIAGNÓSTICO INICIAL
+        console.log("=== DIAGNÓSTICO INICIAL ===");
+        console.log("Tech points iniciales:", techPoints);
+        console.log("Puntos final iniciales:", globalFinalPointsLeft);
+        
+        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+            const state = treesState[treeId];
+            console.log(`Árbol ${treeId}:`, 
+                Object.keys(state.levels || {}).length, "nodos definidos");
+        });
+        
+        // Forzar primera sincronización
+        setTimeout(forceSyncAllTrees, 500);
+        
+        // Cargar estado de URL si existe
+        setTimeout(() => {
+            if (loadStateFromURL()) {
+                console.log("✅ Estado cargado desde URL");
+                // Sincronizar después de cargar
+                setTimeout(forceSyncAllTrees, 100);
+            }
+        }, 1000);
     }, 100);
 });
 // ======================== SISTEMA DE GUARDAR/CARGAR BUILDS ===========================
