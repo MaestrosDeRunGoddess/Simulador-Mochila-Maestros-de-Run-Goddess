@@ -2625,23 +2625,82 @@ function getTertiaryDisplayTitle(treeId, nodeId) {
             else if (fullTitle.includes("Crítico de Habilidad")) return texts["Crit.H"] || "Crit.H";
             else if (fullTitle.includes("Penetración")) return texts["Penet"] || "Penet";
             else if (fullTitle.includes("Golpe Crítico")) return texts["G.Crit"] || "G.Crit";
+function getTertiaryDisplayTitle(treeId, nodeId) {
+    const nodeKey = getTertiaryKey(treeId, nodeId);
+
+    if (techDescriptions.tertiary[treeId] && techDescriptions.tertiary[treeId][nodeKey]) {
+        const fullTitle = techDescriptions.tertiary[treeId][nodeKey].title;
+        
+        // Obtener idioma actual
+        const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+        const texts = translations[currentLang] || translations.es;
+        
+        // Buscar traducción del título completo primero
+        let translatedTitle = texts[fullTitle];
+        
+        // Si no hay traducción exacta, intentar con las abreviaciones
+        if (!translatedTitle) {
+            // Mapeo de títulos completos a sus versiones abreviadas
+            const titleMap = {
+                "Esquivar": "Esq",
+                "Aturdir": "Atur", 
+                "Ignorar Esquivar": "Ig.Esq",
+                "Ignorar Aturdir": "Ig.Atu",
+                "Ignorar Penetración": "Ig.Pen",
+                "Ignorar Contraataque": "Ig.Com",
+                "Crítico de Habilidad": "Crit.H",
+                "Penetración": "Penet",
+                "Golpe Crítico": "G.Crit",
+                "Reflejo de Daño": "Reflejo",
+                "Resistencia Crítico Habilidad": "R.Crit"
+            };
+            
+            // Buscar título en el mapa
+            for (const [key, short] of Object.entries(titleMap)) {
+                if (fullTitle.includes(key)) {
+                    // Buscar traducción de la versión corta
+                    translatedTitle = texts[short] || short;
+                    break;
+                }
+            }
+        }
+        
+        // Si aún no hay traducción, usar el original
+        if (!translatedTitle) {
+            translatedTitle = fullTitle;
+        }
+
+        // CORRECCIÓN IMPORTANTE: Verificar "Ignorar" primero para evitar confusiones
+        if (isMobile) {
+            // Abreviaciones más cortas para móvil
+            // IMPORTANTE: Verificar "Ignorar" primero
+            if (fullTitle.includes("Ignorar Esquivar")) return texts["Ig.Esq"] || "Ig.Esq";
+            else if (fullTitle.includes("Ignorar Aturdir")) return texts["Ig.Atu"] || "Ig.Atu";
+            else if (fullTitle.includes("Ignorar Penetración")) return texts["Ig.Pen"] || "Ig.Pen";
+            else if (fullTitle.includes("Ignorar Contraataque")) return texts["Ig.Com"] || "Ig.Com";
+            else if (fullTitle.includes("Esquivar")) return texts["Esq"] || "Esq";
+            else if (fullTitle.includes("Aturdir")) return texts["Atur"] || "Atur";
+            else if (fullTitle.includes("Crítico de Habilidad")) return texts["Crit.H"] || "Crit.H";
+            else if (fullTitle.includes("Penetración")) return texts["Penet"] || "Penet";
+            else if (fullTitle.includes("Golpe Crítico")) return texts["G.Crit"] || "G.Crit";
             else if (fullTitle.includes("Reflejo de Daño")) return texts["Reflejo"] || "Reflejo";
             else if (fullTitle.includes("Resistencia Crítico Habilidad")) return texts["R.Crit"] || "R.Crit";
-            else return texts[translatedTitle.substring(0, 6)] || translatedTitle.substring(0, 6); // <-- CAMBIADO
+            else return texts[translatedTitle.substring(0, 6)] || translatedTitle.substring(0, 6);
         } else {
             // Títulos más completos para desktop
-            if (fullTitle.includes("Esquivar")) return texts["Esquivar"] || "Esquivar";
-            else if (fullTitle.includes("Aturdir")) return texts["Aturdir"] || "Aturdir";
-            else if (fullTitle.includes("Ignorar Esquivar")) return texts["Ign.Esq"] || "Ign.Esq";
+            // IMPORTANTE: Verificar "Ignorar" primero
+            if (fullTitle.includes("Ignorar Esquivar")) return texts["Ign.Esq"] || "Ign.Esq";
             else if (fullTitle.includes("Ignorar Aturdir")) return texts["Ign.Atu"] || "Ign.Atu";
             else if (fullTitle.includes("Ignorar Penetración")) return texts["Ign.Penet"] || "Ign.Penet";
             else if (fullTitle.includes("Ignorar Contraataque")) return texts["Ign.Contra"] || "Ign.Contra";
+            else if (fullTitle.includes("Esquivar")) return texts["Esquivar"] || "Esquivar";
+            else if (fullTitle.includes("Aturdir")) return texts["Aturdir"] || "Aturdir";
             else if (fullTitle.includes("Crítico de Habilidad")) return texts["Crit.Hab"] || "Crit.Hab";
             else if (fullTitle.includes("Penetración")) return texts["Penetrac"] || "Penetrac";
             else if (fullTitle.includes("Golpe Crítico")) return texts["Gol.Crit"] || "Gol.Crit";
             else if (fullTitle.includes("Reflejo de Daño")) return texts["Reflejo"] || "Reflejo";
             else if (fullTitle.includes("Resistencia Crítico Habilidad")) return texts["Res.Crit"] || "Res.Crit";
-            else return texts[translatedTitle.substring(0, 8)] || translatedTitle.substring(0, 8); // <-- CAMBIADO
+            else return texts[translatedTitle.substring(0, 8)] || translatedTitle.substring(0, 8);
         }
     }
 
