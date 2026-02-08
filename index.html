@@ -2519,11 +2519,15 @@ function getStatinfoForNode(treeId, nodeId, currentLevel) {
                 statKey = "ignorar aturdir";
             }
 
-            if (desc.title.toLowerCase().includes("esquivar") || desc.title.toLowerCase().includes("aturdir") || desc.title.toLowerCase().includes("ignorar esquivar") || desc.title.toLowerCase().includes("ignorar aturdir")) {
-                valuePerLevel = 0.1;
-            } else {
-                valuePerLevel = 4;
-            }
+            // SOLO esquivar e ignorar esquivar mantienen 0.1%
+// Aturdir e ignorar aturdir deben tener 4% como las otras stats
+if (desc.title.toLowerCase().includes("esquivar") || 
+    desc.title.toLowerCase().includes("ignorar esquivar")) {
+    valuePerLevel = 0.1;
+} else {
+    // Todas las demás, incluyendo Aturdir e Ignorar Aturdir, tendrán 4%
+    valuePerLevel = 4;
+}
         }
     } else if (cfg.type === "mid") {
         const side = cfg.id.includes("midL") ? "L" : "R";
