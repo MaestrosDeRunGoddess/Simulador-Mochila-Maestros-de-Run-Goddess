@@ -5089,7 +5089,7 @@ function saveBuild(buildName) {
 }
 
 // Cargar una build (VERSIÓN ROBUSTA PARA GITHUB PAGES)
-function loadBuild(buildName) {
+ function loadBuild(buildName) {
     try {
         console.log(`📂 Intentando cargar build "${buildName}"...`);
         
@@ -5185,53 +5185,117 @@ function loadBuild(buildName) {
         console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
         console.log(`   • Puntos gastados: ${totalPointsSpent}`);
         
-        // 3. ACTUALIZACIÓN RÁPIDA DE UI (SIN RECREAR ÁRBOLES)
-        console.log("3. Actualizando UI rápidamente...");
+        // ===== 3. ACTUALIZACIÓN ULTRA FORZADA DE UI =====
+        console.log("3. ACTUALIZACIÓN ULTRA FORZADA DE UI...");
         
         // A. Primero actualizar UI global INMEDIATAMENTE
         updateGlobalUI();
         updateSpecificStatsDisplay();
         
-        // B. Actualizar todos los nodos EXISTENTES (no recrear árboles)
+        // B. FUNCIÓN ESPECIAL PARA FORZAR ACTUALIZACIÓN
+        function forceNodeUpdate(treeId, nodeId) {
+            const elem = getNodeElement(treeId, nodeId);
+            if (!elem) return;
+            
+            const state = treesState[treeId];
+            const lvl = state?.levels?.[nodeId];
+            const cfg = getNodeConfig(nodeId);
+            
+            if (!lvl || !cfg) return;
+            
+            // ACTUALIZAR LOS TEXTOS DIRECTAMENTE
+            const levelSpan = elem.querySelector('.node-level');
+            const costSpan = elem.querySelector('.cost');
+            const titleSpan = elem.querySelector('.node-title');
+            
+            if (levelSpan && cfg.max > 0) {
+                levelSpan.textContent = `${lvl.current}/${cfg.max}`;
+                // FORZAR RE-RENDER
+                levelSpan.style.display = 'none';
+                void levelSpan.offsetWidth;
+                levelSpan.style.display = '';
+            }
+            
+            if (costSpan) {
+                const currentCost = calculateCurrentCost(nodeId, lvl.current);
+                costSpan.textContent = `C:${currentCost}`;
+                // FORZAR RE-RENDER
+                costSpan.style.opacity = '0.99';
+                void costSpan.offsetWidth;
+                costSpan.style.opacity = '1';
+            }
+            
+            if (titleSpan && cfg.type === "tertiary") {
+                titleSpan.textContent = getTertiaryDisplayTitle(treeId, nodeId);
+            }
+            
+            // ACTUALIZAR ESTADO VISUAL
+            updateNodeVisualState(treeId, nodeId);
+            
+            // TRUCO EXTRA PARA MÓVIL
+            if (isMobile) {
+                elem.style.transform = 'translateZ(0)';
+                void elem.offsetWidth;
+                elem.style.transform = '';
+            }
+        }
+        
+        // C. ACTUALIZAR TODOS LOS NODOS CON LA FUNCIÓN FORZADA
         ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
             const state = treesState[treeId];
             if (!state || !state.levels) return;
             
+            console.log(`   • Actualizando árbol ${treeId}...`);
+            
             Object.keys(state.levels).forEach(nodeId => {
-                updateNodeDisplay(treeId, nodeId);
-                updateNodeVisualState(treeId, nodeId);
+                forceNodeUpdate(treeId, nodeId);
             });
             
             refreshAllowedDisplays(treeId);
         });
         
-        // C. Sincronización extra rápida para la pestaña activa
+        // D. SINCRONIZACIÓN EXTRA CON DELAY MÚLTIPLE
         setTimeout(() => {
+            console.log("   • Sincronización extra (50ms)...");
+            forceSyncAllTrees();
+        }, 50);
+        
+        setTimeout(() => {
+            console.log("   • Sincronización final (150ms)...");
+            
+            // FORZAR ACTUALIZACIÓN DE LA PESTAÑA ACTIVA
             const activeTab = document.querySelector('.tab-button.active');
             if (activeTab && activeTab.dataset.tab !== 'about') {
                 const treeId = activeTab.dataset.tab;
-                console.log(`   • Forzando sync de pestaña activa: ${treeId}`);
+                console.log(`   • Focus en pestaña activa: ${treeId}`);
                 
                 const state = treesState[treeId];
                 if (state && state.levels) {
                     Object.keys(state.levels).forEach(nodeId => {
-                        const elem = getNodeElement(treeId, nodeId);
-                        if (elem) {
-                            // Truco para mostrar valores inmediatamente
-                            elem.style.opacity = '0.99';
-                            void elem.offsetWidth; // Forzar reflow
-                            elem.style.opacity = '1';
+                        if (state.levels[nodeId].current > 0) {
+                            const elem = getNodeElement(treeId, nodeId);
+                            if (elem) {
+                                // COLOR TEMPORAL para confirmar que se actualizó
+                                elem.style.borderColor = '#00ff00';
+                                elem.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.5)';
+                                
+                                setTimeout(() => {
+                                    elem.style.borderColor = '';
+                                    elem.style.boxShadow = '';
+                                }, 500);
+                            }
                         }
                     });
                 }
             }
             
-            // D. Sincronización final
-            forceSyncAllTrees();
+            // ACTUALIZAR UI UNA VEZ MÁS
+            updateGlobalUI();
+            updateSpecificStatsDisplay();
             
             setLog(`✅ Build "${buildName}" cargada desde ${source}.`);
             console.log("✅ Build cargada exitosamente");
-        }, 10);
+        }, 150);
         
         // 4. Re-guardar en localStorage si se cargó de otra fuente
         if (source !== "localStorage") {
