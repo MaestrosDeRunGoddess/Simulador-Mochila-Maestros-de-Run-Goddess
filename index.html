@@ -3667,8 +3667,8 @@ function performSingleDowngradeWithChildPull(treeId, nodeId) {
         return;
     }
 
-    // Usar el NUEVO sistema de downgrade
-    if (!downgradeNodeWithChildPull(treeId, nodeId)) {
+    // Usar el NUEVO downgrade con ajuste de hijos
+    if (!performSingleDowngrade(treeId, nodeId)) {
         stopDowngradeTimer(getNodeElement(treeId, nodeId));
     }
 }
