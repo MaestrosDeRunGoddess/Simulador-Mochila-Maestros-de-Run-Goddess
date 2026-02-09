@@ -4361,39 +4361,104 @@ function updateNodeDisplay(treeId, nodeId) {
 
 // ======================== SINCRONIZACIÓN FORZADA (VERSIÓN ROBUSTA) ===========================
 function forceSyncAllTrees() {
-  //  console.log("🔄 Forzando sincronización completa...");
+    console.log("🔄 forceSyncAllTrees() iniciando...");
     
+    // ===== NUEVO: VERIFICACIÓN DE SEGURIDAD =====
+    // 1. Verificar si acabamos de cargar una build
+    if (window.buildJustLoaded) {
+        console.log("⏸️  forceSyncAllTrees pausada - build recién cargada");
+        
+        // Limpiar bandera después de tiempo seguro
+        setTimeout(() => {
+            window.buildJustLoaded = false;
+            console.log("🏷️  Bandera buildJustLoaded limpiada");
+        }, 3000);
+        
+        return; // ¡NO sincronizar después de cargar!
+    }
+    
+    // 2. Verificar si hay niveles > 0 en algún árbol
+    let totalNodesWithLevel = 0;
+    Object.keys(treesState).forEach(treeId => {
+        const state = treesState[treeId];
+        const nodesWithLevel = Object.keys(state.levels || {}).filter(id => 
+            state.levels[id]?.current > 0
+        );
+        totalNodesWithLevel += nodesWithLevel.length;
+    });
+    
+    if (totalNodesWithLevel === 0) {
+        console.log("⏭️  forceSyncAllTrees omitida - todos los nodos en 0");
+        return; // No hay nada que sincronizar
+    }
+    
+    console.log(`📊 Nodos con nivel > 0: ${totalNodesWithLevel}`);
+    
+    // ===== SINCRONIZACIÓN INTELIGENTE =====
     // SIEMPRE actualizar todos los árboles para asegurar consistencia
     const treesToUpdate = ['guardian', 'vanguardia', 'canon'];
     
-    treesToUpdate.forEach(treeId => {
-        const state = treesState[treeId];
-        const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
-        
-        if (!container || !state) return;
-        
-        // 1. Para cada nodo en el estado
-        Object.keys(state.levels || {}).forEach(nodeId => {
-            const lvl = state.levels[nodeId];
-            const elem = container.querySelector(`.node[data-id="${nodeId}"]`);
+    treesToUpdate.forEach((treeId, index) => {
+        // Espaciar actualizaciones para mejor rendimiento
+        setTimeout(() => {
+            const state = treesState[treeId];
+            const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
             
-            if (elem && lvl) {
-                // 2. Actualizar display numérico
-                updateNodeDisplay(treeId, nodeId);
-                
-                // 3. Actualizar estado visual
-                updateNodeVisualState(treeId, nodeId);
+            if (!container || !state) return;
+            
+            // 1. Contar nodos activos en este árbol
+            const activeNodes = Object.keys(state.levels || {}).filter(id => 
+                state.levels[id]?.current > 0
+            );
+            
+            if (activeNodes.length === 0) {
+                // console.log(`   • ${treeId}: sin nodos activos, skip`);
+                return;
             }
-        });
-        
-        // 4. Actualizar restricciones de rama
-        refreshAllowedDisplays(treeId);
+            
+            console.log(`   • ${treeId}: ${activeNodes.length} nodos activos`);
+            
+            // 2. Para cada nodo en el estado
+            Object.keys(state.levels || {}).forEach(nodeId => {
+                const lvl = state.levels[nodeId];
+                const elem = container.querySelector(`.node[data-id="${nodeId}"]`);
+                
+                if (elem && lvl) {
+                    // VERIFICACIÓN EXTRA: ¿El nodo muestra el valor correcto?
+                    const levelSpan = elem.querySelector('.node-level');
+                    const cfg = getNodeConfig(nodeId);
+                    
+                    if (levelSpan && cfg) {
+                        const currentUI = levelSpan.textContent;
+                        const shouldBe = `${lvl.current}/${cfg.max}`;
+                        
+                        // Solo actualizar si está mostrando algo INCORRECTO
+                        if (currentUI !== shouldBe) {
+                            // console.log(`     🔄 ${nodeId}: ${currentUI} → ${shouldBe}`);
+                            updateNodeDisplay(treeId, nodeId);
+                        } else {
+                            // console.log(`     ✓ ${nodeId}: ${shouldBe} (correcto)`);
+                        }
+                    }
+                    
+                    // Actualizar estado visual (colores)
+                    updateNodeVisualState(treeId, nodeId);
+                }
+            });
+            
+            // 3. Actualizar restricciones de rama
+            refreshAllowedDisplays(treeId);
+            
+        }, index * 100); // 100ms entre cada árbol
     });
     
-    // 5. Actualizar UI global
+    // 4. Actualizar UI global
     updateGlobalUI();
     
-  //  console.log("✅ Sincronización forzada completada");
+    // 5. Actualizar estadísticas específicas
+    updateSpecificStatsDisplay();
+    
+    console.log("✅ forceSyncAllTrees() completada");
 }
 
 // ======================== ACTUALIZACIÓN VISUAL PARA MÓVIL ===========================
