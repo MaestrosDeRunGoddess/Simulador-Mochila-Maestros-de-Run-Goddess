@@ -5304,6 +5304,114 @@ function loadBuild(buildName) {
             const state = treesState[treeId];
             if (!state || !state.levels) return;
             
+function loadBuild(buildName) {
+    try {
+        console.log(`📂 Intentando cargar build "${buildName}"...`);
+        
+        let buildData = null;
+        let source = "none";
+        
+        // 1. localStorage
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage !== null) {
+                const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
+                if (savedData) {
+                    buildData = JSON.parse(savedData);
+                    source = "localStorage";
+                    console.log("✅ Encontrado en localStorage");
+                }
+            }
+        } catch (lsError) {
+            console.warn("localStorage falló:", lsError);
+        }
+        
+        // 2. sessionStorage (fallback)
+        if (!buildData) {
+            try {
+                if (typeof sessionStorage !== 'undefined') {
+                    const savedData = sessionStorage.getItem(`tech_tree_build_${buildName}`);
+                    if (savedData) {
+                        buildData = JSON.parse(savedData);
+                        source = "sessionStorage";
+                        console.log("✅ Encontrado en sessionStorage");
+                    }
+                }
+            } catch (ssError) {
+                console.warn("sessionStorage falló:", ssError);
+            }
+        }
+        
+        // 3. Memoria (fallback final)
+        if (!buildData && window.fallbackStorage) {
+            buildData = window.fallbackStorage[`tech_tree_build_${buildName}`];
+            if (buildData) {
+                source = "memory";
+                console.log("✅ Encontrado en memoria");
+            }
+        }
+        
+        // 4. Si no se encuentra en ningún lado
+        if (!buildData) {
+            setLog(`❌ Build "${buildName}" no encontrada en ningún almacenamiento.`);
+            console.error("Build no encontrada en:", {
+                localStorage: typeof localStorage,
+                sessionStorage: typeof sessionStorage,
+                fallbackStorage: !!window.fallbackStorage
+            });
+            return false;
+        }
+        
+        console.log(`✅ Build cargada desde: ${source}`);
+        
+        // CORRECCIÓN: Convertir unlockedNodes de Array a Set
+        function fixUnlockedNodes(state) {
+            if (!state) return { levels: {}, lockedBranch: null, unlockedNodes: new Set() };
+            
+            const fixedState = {
+                levels: state.levels || {},
+                lockedBranch: state.lockedBranch || null,
+                unlockedNodes: new Set()
+            };
+            
+            if (state.unlockedNodes) {
+                if (Array.isArray(state.unlockedNodes)) {
+                    fixedState.unlockedNodes = new Set(state.unlockedNodes);
+                } else if (state.unlockedNodes instanceof Set) {
+                    fixedState.unlockedNodes = state.unlockedNodes;
+                }
+            }
+            
+            return fixedState;
+        }
+        
+        // 1. RESTAURAR DATOS
+        console.log("1. Restaurando datos de árboles...");
+        treesState.guardian = fixUnlockedNodes(buildData.guardian);
+        treesState.vanguardia = fixUnlockedNodes(buildData.vanguardia);
+        treesState.canon = fixUnlockedNodes(buildData.canon);
+        
+        // 2. RESTAURAR RECURSOS
+        console.log("2. Restaurando recursos...");
+        techPoints = buildData.techPoints !== undefined ? buildData.techPoints : 9999999;
+        globalFinalPointsLeft = buildData.globalFinalPointsLeft !== undefined ? buildData.globalFinalPointsLeft : 3;
+        totalPointsSpent = buildData.totalPointsSpent || 0;
+        
+        console.log(`   • Tech points: ${techPoints}`);
+        console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
+        console.log(`   • Puntos gastados: ${totalPointsSpent}`);
+        
+        // 3. ACTUALIZACIÓN RÁPIDA DE UI (SIN RECREAR ÁRBOLES)
+        console.log("3. Actualizando UI rápidamente...");
+        
+        // A. Primero actualizar UI global INMEDIATAMENTE
+        updateGlobalUI();
+        updateSpecificStatsDisplay();
+        
+        // B. Actualizar todos los nodos EXISTENTES (no recrear árboles)
+        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+            const state = treesState[treeId];
+            if (!state || !state.levels) return;
+            
             Object.keys(state.levels).forEach(nodeId => {
                 updateNodeDisplay(treeId, nodeId);
                 updateNodeVisualState(treeId, nodeId);
@@ -5356,7 +5464,6 @@ function loadBuild(buildName) {
         return false;
     }
 }
-
 // NUEVA FUNCIÓN: Re-inicializar árbol visualmente sin perder datos
 function reinitTreePreservingData(treeId) {
     const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
