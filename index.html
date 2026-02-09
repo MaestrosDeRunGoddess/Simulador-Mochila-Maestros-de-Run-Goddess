@@ -4393,10 +4393,10 @@ function forceMobileVisualUpdate(treeId, nodeId) {
 function resetAll() {
     let totalRefund = 0;
     
-    // 1. Calcular reembolso total de lo que tenía
+    // 1. Calcular reembolso total
     Object.keys(treesState).forEach(treeId => {
         const state = treesState[treeId];
-        Object.keys(state.levels).forEach(nodeId => {
+        Object.keys(state.levels || {}).forEach(nodeId => {
             const cfg = getNodeConfig(nodeId);
             const lvl = state.levels[nodeId];
             if (lvl && lvl.current > 0) {
@@ -4413,38 +4413,38 @@ function resetAll() {
     globalFinalPointsLeft = 3;
     totalPointsSpent = 0;
 
-    // 3. Resetear ESTADOS pero NO destruir elementos DOM
+    // 3. Resetear ESTADOS pero MANTENER ESTRUCTURA
     Object.keys(treesState).forEach(treeId => {
         const state = treesState[treeId];
         
-        // Poner todos los niveles a 0
-        Object.keys(state.levels || {}).forEach(nodeId => {
-            if (state.levels[nodeId]) {
-                state.levels[nodeId].current = 0;
-            }
+        // Asegurar que levels existe
+        if (!state.levels) state.levels = {};
+        
+        // Resetear cada nodo a 0
+        Object.keys(state.levels).forEach(nodeId => {
+            state.levels[nodeId].current = 0;
         });
         
         // Resetear otros estados
         state.lockedBranch = null;
         state.unlockedNodes = new Set();
-        
-        // ACTUALIZAR VISUALES DE ESTE ÁRBOL
+    });
+
+    // 4. ACTUALIZAR TODA LA UI (SIN RECREAR ÁRBOLES)
+    Object.keys(treesState).forEach(treeId => {
+        const state = treesState[treeId];
         Object.keys(state.levels || {}).forEach(nodeId => {
             updateNodeDisplay(treeId, nodeId);
             updateNodeVisualState(treeId, nodeId);
         });
-        
         refreshAllowedDisplays(treeId);
     });
 
-    // 4. NO llamar a initTree() - ¡ESTA ES LA CLAVE!
-    // initTree() destruye y recrea elementos DOM, eso rompe todo
-    
     // 5. Actualizar UI global
     updateGlobalUI();
     updateSpecificStatsDisplay();
     
-    // 6. Sincronización extra (por si acaso)
+    // 6. Sincronización
     setTimeout(() => {
         forceSyncAllTrees();
     }, 50);
@@ -4455,10 +4455,12 @@ function resetAll() {
 
 function resetCurrentTab() {
     const activeTab = document.querySelector('.tab-button.active');
-    if (!activeTab) return;
+    if (!activeTab || activeTab.dataset.tab === 'about') return;
 
     const tabId = activeTab.dataset.tab;
     const state = treesState[tabId];
+    
+    if (!state) return;
 
     let totalRefund = 0;
     
@@ -4478,37 +4480,39 @@ function resetCurrentTab() {
     techPoints += totalRefund;
     totalPointsSpent = Math.max(0, totalPointsSpent - totalRefund);
 
-    // 3. Resetear ESTA pestaña (sin destruir)
-    Object.keys(state.levels || {}).forEach(nodeId => {
-        if (state.levels[nodeId]) {
-            state.levels[nodeId].current = 0;
-        }
+    // 3. Asegurar que levels existe
+    if (!state.levels) state.levels = {};
+    
+    // 4. Resetear cada nodo a 0
+    Object.keys(state.levels).forEach(nodeId => {
+        state.levels[nodeId].current = 0;
     });
     
+    // 5. Resetear otros estados
     state.lockedBranch = null;
     state.unlockedNodes = new Set();
     
-    // 4. ACTUALIZAR VISUALES (sin recrear árbol)
-    Object.keys(state.levels || {}).forEach(nodeId => {
+    // 6. ACTUALIZAR VISUALES
+    Object.keys(state.levels).forEach(nodeId => {
         updateNodeDisplay(tabId, nodeId);
         updateNodeVisualState(tabId, nodeId);
     });
     
     refreshAllowedDisplays(tabId);
 
-    // 5. Actualizar UI global
+    // 7. Actualizar UI global
     updateGlobalUI();
     updateSpecificStatsDisplay();
     
-    // 6. Sincronización extra
+    // 8. Sincronización
     setTimeout(() => {
         forceSyncAllTrees();
     }, 50);
 
-    // 7. Log
+    // 9. Log
     setLog(`Pestaña ${tabId} reiniciada. +${totalRefund} pts.`);
 }
-
+  
 // Función para traducir nodos del árbol
 function translateTreeNodes(treeId, texts) {
     const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
