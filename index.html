@@ -4488,78 +4488,6 @@ function forceSyncAllTrees() {
                         const currentUI = levelSpan.textContent;
                         const shouldBe = `${lvl.current}/${cfg.max}`;
                         
-function forceSyncAllTrees() {
-    console.log("🔄 forceSyncAllTrees() iniciando...");
-    
-    // ===== NUEVO: VERIFICACIÓN DE SEGURIDAD =====
-    // 1. Verificar si acabamos de cargar una build
-    if (window.buildJustLoaded) {
-        console.log("⏸️  forceSyncAllTrees pausada - build recién cargada");
-        
-        // Limpiar bandera después de tiempo seguro
-        setTimeout(() => {
-            window.buildJustLoaded = false;
-            console.log("🏷️  Bandera buildJustLoaded limpiada");
-        }, 3000);
-        
-        return; // ¡NO sincronizar después de cargar!
-    }
-    
-    // 2. Verificar si hay niveles > 0 en algún árbol
-    let totalNodesWithLevel = 0;
-    Object.keys(treesState).forEach(treeId => {
-        const state = treesState[treeId];
-        const nodesWithLevel = Object.keys(state.levels || {}).filter(id => 
-            state.levels[id]?.current > 0
-        );
-        totalNodesWithLevel += nodesWithLevel.length;
-    });
-    
-    if (totalNodesWithLevel === 0) {
-        console.log("⏭️  forceSyncAllTrees omitida - todos los nodos en 0");
-        return; // No hay nada que sincronizar
-    }
-    
-    console.log(`📊 Nodos con nivel > 0: ${totalNodesWithLevel}`);
-    
-    // ===== SINCRONIZACIÓN INTELIGENTE =====
-    // SIEMPRE actualizar todos los árboles para asegurar consistencia
-    const treesToUpdate = ['guardian', 'vanguardia', 'canon'];
-    
-    treesToUpdate.forEach((treeId, index) => {
-        // Espaciar actualizaciones para mejor rendimiento
-        setTimeout(() => {
-            const state = treesState[treeId];
-            const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
-            
-            if (!container || !state) return;
-            
-            // 1. Contar nodos activos en este árbol
-            const activeNodes = Object.keys(state.levels || {}).filter(id => 
-                state.levels[id]?.current > 0
-            );
-            
-            if (activeNodes.length === 0) {
-                // console.log(`   • ${treeId}: sin nodos activos, skip`);
-                return;
-            }
-            
-            console.log(`   • ${treeId}: ${activeNodes.length} nodos activos`);
-            
-            // 2. Para cada nodo en el estado
-            Object.keys(state.levels || {}).forEach(nodeId => {
-                const lvl = state.levels[nodeId];
-                const elem = container.querySelector(`.node[data-id="${nodeId}"]`);
-                
-                if (elem && lvl) {
-                    // VERIFICACIÓN EXTRA: ¿El nodo muestra el valor correcto?
-                    const levelSpan = elem.querySelector('.node-level');
-                    const cfg = getNodeConfig(nodeId);
-                    
-                    if (levelSpan && cfg) {
-                        const currentUI = levelSpan.textContent;
-                        const shouldBe = `${lvl.current}/${cfg.max}`;
-                        
                         // Solo actualizar si está mostrando algo INCORRECTO
                         if (currentUI !== shouldBe) {
                             // console.log(`     🔄 ${nodeId}: ${currentUI} → ${shouldBe}`);
@@ -4588,6 +4516,7 @@ function forceSyncAllTrees() {
     
     console.log("✅ forceSyncAllTrees() completada");
 }
+
 // ======================== ACTUALIZACIÓN VISUAL PARA MÓVIL ===========================
 function forceMobileVisualUpdate(treeId, nodeId) {
     if (!isMobile) return;
@@ -5405,153 +5334,6 @@ function loadBuild(buildName) {
     try {
         console.log(`📂 Cargando build "${buildName}"...`);
         
-        let buildData = null;
-        let source = "none";
-        
-        // 1. localStorage
-        try {
-            if (typeof localStorage !== 'undefined' && localStorage !== null) {
-                const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
-                if (savedData) {
-                    buildData = JSON.parse(savedData);
-                    source = "localStorage";
-                    console.log("✅ Encontrado en localStorage");
-                }
-            }
-        } catch (lsError) {
-            console.warn("localStorage falló:", lsError);
-        }
-        
-        // 2. sessionStorage (fallback)
-        if (!buildData) {
-            try {
-                if (typeof sessionStorage !== 'undefined') {
-                    const savedData = sessionStorage.getItem(`tech_tree_build_${buildName}`);
-                    if (savedData) {
-                        buildData = JSON.parse(savedData);
-                        source = "sessionStorage";
-                        console.log("✅ Encontrado en sessionStorage");
-                    }
-                }
-            } catch (ssError) {
-                console.warn("sessionStorage falló:", ssError);
-            }
-        }
-        
-        // 3. Memoria (fallback final)
-        if (!buildData && window.fallbackStorage) {
-            buildData = window.fallbackStorage[`tech_tree_build_${buildName}`];
-            if (buildData) {
-                source = "memory";
-                console.log("✅ Encontrado en memoria");
-            }
-        }
-        
-        // 4. Si no se encuentra en ningún lado
-        if (!buildData) {
-            setLog(`❌ Build "${buildName}" no encontrada en ningún almacenamiento.`);
-            console.error("Build no encontrada en:", {
-                localStorage: typeof localStorage,
-                sessionStorage: typeof sessionStorage,
-                fallbackStorage: !!window.fallbackStorage
-            });
-            return false;
-        }
-        
-        console.log(`✅ Build cargada desde: ${source}`);
-        
-        // CORRECCIÓN: Convertir unlockedNodes de Array a Set
-        function fixUnlockedNodes(state) {
-            if (!state) return { levels: {}, lockedBranch: null, unlockedNodes: new Set() };
-            
-            const fixedState = {
-                levels: state.levels || {},
-                lockedBranch: state.lockedBranch || null,
-                unlockedNodes: new Set()
-            };
-            
-            if (state.unlockedNodes) {
-                if (Array.isArray(state.unlockedNodes)) {
-                    fixedState.unlockedNodes = new Set(state.unlockedNodes);
-                } else if (state.unlockedNodes instanceof Set) {
-                    fixedState.unlockedNodes = state.unlockedNodes;
-                }
-            }
-            
-            return fixedState;
-        }
-        
-        // 1. RESTAURAR DATOS
-        console.log("1. Restaurando datos de árboles...");
-        treesState.guardian = fixUnlockedNodes(buildData.guardian);
-        treesState.vanguardia = fixUnlockedNodes(buildData.vanguardia);
-        treesState.canon = fixUnlockedNodes(buildData.canon);
-        
-        // 2. RESTAURAR RECURSOS
-        console.log("2. Restaurando recursos...");
-        techPoints = buildData.techPoints !== undefined ? buildData.techPoints : 9999999;
-        globalFinalPointsLeft = buildData.globalFinalPointsLeft !== undefined ? buildData.globalFinalPointsLeft : 3;
-        totalPointsSpent = buildData.totalPointsSpent || 0;
-        
-        console.log(`   • Tech points: ${techPoints}`);
-        console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
-        console.log(`   • Puntos gastados: ${totalPointsSpent}`);
-        
-        // ===== 3. SINCRONIZACIÓN INTELIGENTE CON LAS 3 FUNCIONES CORREGIDAS =====
-        console.log("3. Sincronización inteligente...");
-        
-        // A. Primero actualizar recursos globales (rápido)
-        updateGlobalUI();
-        updateSpecificStatsDisplay();
-        
-        // B. Actualizar CADA árbol con timing optimizado
-        ['guardian', 'vanguardia', 'canon'].forEach((treeId, index) => {
-            setTimeout(() => {
-                const state = treesState[treeId];
-                if (!state || !state.levels) return;
-                
-                console.log(`   • Sincronizando árbol ${treeId}...`);
-                
-                // 1. Actualizar displays de TODOS los nodos
-                Object.keys(state.levels).forEach(nodeId => {
-                    updateNodeDisplay(treeId, nodeId);
-                });
-                
-                // 2. Aplicar estados visuales (colores) - la nueva función preserva estados válidos
-                Object.keys(state.levels).forEach(nodeId => {
-                    updateNodeVisualState(treeId, nodeId);
-                });
-                
-                // 3. Refresh de bloqueos - la nueva función respeta niveles > 0
-                refreshAllowedDisplays(treeId);
-                
-            }, index * 50); // Espaciar por árbol para mejor rendimiento
-        });
-        
-        // C. Sincronización final con delay para asegurar
-        setTimeout(() => {
-            console.log("   • Sincronización final...");
-            
-            // Forzar una última actualización de la pestaña activa
-            const activeTab = document.querySelector('.tab-button.active');
-            if (activeTab && activeTab.dataset.tab !== 'about') {
-                const treeId = activeTab.dataset.tab;
-                const state = treesState[treeId];
-                
-                if (state && state.levels) {
-                    Object.keys(state.levels).forEach(nodeId => {
-                        const elem = getNodeElement(treeId, nodeId);
-                        if (elem && state.levels[nodeId].current > 0) {
-                            // Verificar que todo esté visible
-                            elem.style.opacity = '1';
-                            elem.style.visibility = 'visible';
-                        }
-                    });
-                }
-function loadBuild(buildName) {
-    try {
-        console.log(`📂 Cargando build "${buildName}"...`);
-        
         // ===== BANDERA CRÍTICA: Indicar que estamos cargando una build =====
         window.buildJustLoaded = true;
         console.log("🏷️  Bandera buildJustLoaded activada");
@@ -5792,6 +5574,7 @@ function loadBuild(buildName) {
         return false;
     }
 }
+
 // NUEVA FUNCIÓN: Re-inicializar árbol visualmente sin perder datos
 function reinitTreePreservingData(treeId) {
     const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
