@@ -5196,49 +5196,151 @@ console.log("3. Recreando árboles visualmente...");
 // ===== NUEVO: ACTUALIZACIÓN EXTRA DESPUÉS DE RECREAR =====
 setTimeout(() => {
     // Actualizar TODA la UI global
-    updateGlobalUI();
-    updateSpecificStatsDisplay();
-    
-    // Forzar sincronización completa
-    forceSyncAllTrees();
-    
-    // Feedback visual adicional para móvil
-    if (isMobile) {
-        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
-            const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
-            if (container) {
-                container.style.transform = 'translateZ(0)';
-                void container.offsetWidth;
-                container.style.transform = '';
+function loadBuild(buildName) {
+    try {
+        console.log(`📂 Intentando cargar build "${buildName}"...`);
+        
+        let buildData = null;
+        let source = "none";
+        
+        // 1. localStorage
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage !== null) {
+                const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
+                if (savedData) {
+                    buildData = JSON.parse(savedData);
+                    source = "localStorage";
+                    console.log("✅ Encontrado en localStorage");
+                }
             }
-        });
-    }
-}, 100);
-// ===== FIN NUEVO =====
+        } catch (lsError) {
+            console.warn("localStorage falló:", lsError);
+        }
         
-        // 4. ACTUALIZAR UI GLOBAL
-        console.log("4. Actualizando UI global...");
+        // 2. sessionStorage (fallback)
+        if (!buildData) {
+            try {
+                if (typeof sessionStorage !== 'undefined') {
+                    const savedData = sessionStorage.getItem(`tech_tree_build_${buildName}`);
+                    if (savedData) {
+                        buildData = JSON.parse(savedData);
+                        source = "sessionStorage";
+                        console.log("✅ Encontrado en sessionStorage");
+                    }
+                }
+            } catch (ssError) {
+                console.warn("sessionStorage falló:", ssError);
+            }
+        }
+        
+        // 3. Memoria (fallback final)
+        if (!buildData && window.fallbackStorage) {
+            buildData = window.fallbackStorage[`tech_tree_build_${buildName}`];
+            if (buildData) {
+                source = "memory";
+                console.log("✅ Encontrado en memoria");
+            }
+        }
+        
+        // 4. Si no se encuentra en ningún lado
+        if (!buildData) {
+            setLog(`❌ Build "${buildName}" no encontrada en ningún almacenamiento.`);
+            console.error("Build no encontrada en:", {
+                localStorage: typeof localStorage,
+                sessionStorage: typeof sessionStorage,
+                fallbackStorage: !!window.fallbackStorage
+            });
+            return false;
+        }
+        
+        console.log(`✅ Build cargada desde: ${source}`);
+        
+        // CORRECCIÓN: Convertir unlockedNodes de Array a Set
+        function fixUnlockedNodes(state) {
+            if (!state) return { levels: {}, lockedBranch: null, unlockedNodes: new Set() };
+            
+            const fixedState = {
+                levels: state.levels || {},
+                lockedBranch: state.lockedBranch || null,
+                unlockedNodes: new Set()
+            };
+            
+            if (state.unlockedNodes) {
+                if (Array.isArray(state.unlockedNodes)) {
+                    fixedState.unlockedNodes = new Set(state.unlockedNodes);
+                } else if (state.unlockedNodes instanceof Set) {
+                    fixedState.unlockedNodes = state.unlockedNodes;
+                }
+            }
+            
+            return fixedState;
+        }
+        
+        // 1. RESTAURAR DATOS
+        console.log("1. Restaurando datos de árboles...");
+        treesState.guardian = fixUnlockedNodes(buildData.guardian);
+        treesState.vanguardia = fixUnlockedNodes(buildData.vanguardia);
+        treesState.canon = fixUnlockedNodes(buildData.canon);
+        
+        // 2. RESTAURAR RECURSOS
+        console.log("2. Restaurando recursos...");
+        techPoints = buildData.techPoints !== undefined ? buildData.techPoints : 9999999;
+        globalFinalPointsLeft = buildData.globalFinalPointsLeft !== undefined ? buildData.globalFinalPointsLeft : 3;
+        totalPointsSpent = buildData.totalPointsSpent || 0;
+        
+        console.log(`   • Tech points: ${techPoints}`);
+        console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
+        console.log(`   • Puntos gastados: ${totalPointsSpent}`);
+        
+        // 3. ACTUALIZACIÓN RÁPIDA DE UI (SIN RECREAR ÁRBOLES)
+        console.log("3. Actualizando UI rápidamente...");
+        
+        // A. Primero actualizar UI global INMEDIATAMENTE
         updateGlobalUI();
+        updateSpecificStatsDisplay();
         
-        // 5. FORZAR ACTUALIZACIÓN DE TODOS LOS NODOS
-        console.log("5. Actualizando displays de nodos...");
+        // B. Actualizar todos los nodos EXISTENTES (no recrear árboles)
         ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
             const state = treesState[treeId];
-            Object.keys(state.levels || {}).forEach(nodeId => {
+            if (!state || !state.levels) return;
+            
+            Object.keys(state.levels).forEach(nodeId => {
                 updateNodeDisplay(treeId, nodeId);
                 updateNodeVisualState(treeId, nodeId);
             });
+            
             refreshAllowedDisplays(treeId);
         });
         
-        // 6. ACTUALIZAR ESTADÍSTICAS ESPECÍFICAS
-        console.log("6. Actualizando estadísticas...");
-        updateSpecificStatsDisplay();
+        // C. Sincronización extra rápida para la pestaña activa
+        setTimeout(() => {
+            const activeTab = document.querySelector('.tab-button.active');
+            if (activeTab && activeTab.dataset.tab !== 'about') {
+                const treeId = activeTab.dataset.tab;
+                console.log(`   • Forzando sync de pestaña activa: ${treeId}`);
+                
+                const state = treesState[treeId];
+                if (state && state.levels) {
+                    Object.keys(state.levels).forEach(nodeId => {
+                        const elem = getNodeElement(treeId, nodeId);
+                        if (elem) {
+                            // Truco para mostrar valores inmediatamente
+                            elem.style.opacity = '0.99';
+                            void elem.offsetWidth; // Forzar reflow
+                            elem.style.opacity = '1';
+                        }
+                    });
+                }
+            }
+            
+            // D. Sincronización final
+            forceSyncAllTrees();
+            
+            setLog(`✅ Build "${buildName}" cargada desde ${source}.`);
+            console.log("✅ Build cargada exitosamente");
+        }, 10);
         
-        setLog(`✅ Build "${buildName}" cargada desde ${source}.`);
-        console.log("✅ Build cargada exitosamente");
-        
-        // Guardar automáticamente en localStorage si se cargó de otra fuente
+        // 4. Re-guardar en localStorage si se cargó de otra fuente
         if (source !== "localStorage") {
             setTimeout(() => {
                 console.log("🔄 Re-guardando en localStorage...");
