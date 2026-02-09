@@ -4389,19 +4389,19 @@ function forceMobileVisualUpdate(treeId, nodeId) {
         elem.style.transform = '';
     }, 100);
 }
-
+// FUNCIONES DE RESET
 function resetAll() {
     let totalRefund = 0;
     
-    // 1. Calcular reembolso total
+    // 1. Calcular reembolso total de lo que tenía
     Object.keys(treesState).forEach(treeId => {
         const state = treesState[treeId];
         Object.keys(state.levels).forEach(nodeId => {
             const cfg = getNodeConfig(nodeId);
             const lvl = state.levels[nodeId];
-            if (lvl.current > 0) {
+            if (lvl && lvl.current > 0) {
                 totalRefund += calculateTotalSpentOnNode(nodeId, lvl.current);
-                if (cfg.type === "final" && lvl.current >= 1) {
+                if (cfg && cfg.type === "final" && lvl.current >= 1) {
                     globalFinalPointsLeft += 1;
                 }
             }
@@ -4413,31 +4413,43 @@ function resetAll() {
     globalFinalPointsLeft = 3;
     totalPointsSpent = 0;
 
-    // 3. Resetear TODOS los estados de árboles
+    // 3. Resetear ESTADOS pero NO destruir elementos DOM
     Object.keys(treesState).forEach(treeId => {
-        treesState[treeId].levels = {};
-        treesState[treeId].lockedBranch = null;
-        treesState[treeId].unlockedNodes = new Set();
-    });
-
-    // 4. Re-inicializar TODOS los árboles
-    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
-        initTree(treeId);
-    });
-
-    // 5. ACTUALIZACIÓN CRÍTICA: Forzar actualización visual completa
-    updateGlobalUI(); // ← Esto actualiza puntos y stats globales
-    
-    // 6. Actualizar estadísticas específicas también
-    updateSpecificStatsDisplay();
-    
-    // 7. Actualizar estado visual de todos los nodos
-    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
-        updateAllNodesVisualState(treeId);
+        const state = treesState[treeId];
+        
+        // Poner todos los niveles a 0
+        Object.keys(state.levels || {}).forEach(nodeId => {
+            if (state.levels[nodeId]) {
+                state.levels[nodeId].current = 0;
+            }
+        });
+        
+        // Resetear otros estados
+        state.lockedBranch = null;
+        state.unlockedNodes = new Set();
+        
+        // ACTUALIZAR VISUALES DE ESTE ÁRBOL
+        Object.keys(state.levels || {}).forEach(nodeId => {
+            updateNodeDisplay(treeId, nodeId);
+            updateNodeVisualState(treeId, nodeId);
+        });
+        
         refreshAllowedDisplays(treeId);
     });
 
-    // 8. Log
+    // 4. NO llamar a initTree() - ¡ESTA ES LA CLAVE!
+    // initTree() destruye y recrea elementos DOM, eso rompe todo
+    
+    // 5. Actualizar UI global
+    updateGlobalUI();
+    updateSpecificStatsDisplay();
+    
+    // 6. Sincronización extra (por si acaso)
+    setTimeout(() => {
+        forceSyncAllTrees();
+    }, 50);
+
+    // 7. Log
     setLog(`Todo reiniciado. +${totalRefund} pts recuperados.`);
 }
 
@@ -4449,34 +4461,51 @@ function resetCurrentTab() {
     const state = treesState[tabId];
 
     let totalRefund = 0;
-    Object.keys(state.levels).forEach(nodeId => {
+    
+    // 1. Calcular reembolso
+    Object.keys(state.levels || {}).forEach(nodeId => {
         const cfg = getNodeConfig(nodeId);
         const lvl = state.levels[nodeId];
-        if (lvl.current > 0) {
+        if (lvl && lvl.current > 0) {
             totalRefund += calculateTotalSpentOnNode(nodeId, lvl.current);
-            if (cfg.type === "final" && lvl.current >= 1) {
+            if (cfg && cfg.type === "final" && lvl.current >= 1) {
                 globalFinalPointsLeft += 1;
             }
         }
     });
 
+    // 2. Devolver puntos
     techPoints += totalRefund;
     totalPointsSpent = Math.max(0, totalPointsSpent - totalRefund);
 
-    // Resetear ESTE árbol específico
-    state.levels = {};
+    // 3. Resetear ESTA pestaña (sin destruir)
+    Object.keys(state.levels || {}).forEach(nodeId => {
+        if (state.levels[nodeId]) {
+            state.levels[nodeId].current = 0;
+        }
+    });
+    
     state.lockedBranch = null;
     state.unlockedNodes = new Set();
     
-    // Re-inicializar solo este árbol
-    initTree(tabId);
+    // 4. ACTUALIZAR VISUALES (sin recrear árbol)
+    Object.keys(state.levels || {}).forEach(nodeId => {
+        updateNodeDisplay(tabId, nodeId);
+        updateNodeVisualState(tabId, nodeId);
+    });
     
-    // ACTUALIZACIONES CRÍTICAS:
-    updateGlobalUI(); // ← Esto es lo que falta
     refreshAllowedDisplays(tabId);
-    updateAllNodesVisualState(tabId);
-    updateSpecificStatsDisplay();
 
+    // 5. Actualizar UI global
+    updateGlobalUI();
+    updateSpecificStatsDisplay();
+    
+    // 6. Sincronización extra
+    setTimeout(() => {
+        forceSyncAllTrees();
+    }, 50);
+
+    // 7. Log
     setLog(`Pestaña ${tabId} reiniciada. +${totalRefund} pts.`);
 }
 
