@@ -3916,6 +3916,7 @@ function handleNodeUpgrade(treeId, nodeElem) {
 // NUEVA: Actualizar estado visual de nodos
 // Función para actualizar estado visual de un nodo (colores)
 function updateNodeVisualState(treeId, nodeId) {
+function updateNodeVisualState(treeId, nodeId) {
     const elem = getNodeElement(treeId, nodeId);
     if (!elem) return;
     
@@ -3923,35 +3924,82 @@ function updateNodeVisualState(treeId, nodeId) {
     const cfg = getNodeConfig(nodeId);
     const currentLevel = state.levels[nodeId]?.current || 0;
     
-    // Quitar todas las clases de estado previas
-    elem.classList.remove('node-efficient', 'node-overleveled', 'node-critical');
-    
     if (cfg.type === 'root') return;
     
-    // Calcular nivel mínimo requerido por los hijos
-    const requiredByChildren = calculateLevelRequiredByChildren(treeId, nodeId);
+    // ===== NUEVA LÓGICA MEJORADA =====
     
-    if (cfg.type === 'main') {
-        // Para nodos principales: verde si está al nivel justo
-        if (currentLevel === requiredByChildren && currentLevel > 0) {
-            elem.classList.add('node-efficient'); // Justo lo necesario
-        } else if (currentLevel > requiredByChildren && requiredByChildren > 0) {
-            elem.classList.add('node-overleveled'); // Más de lo necesario
-        }
-    } else {
-        // Para otros nodos: rojo si hijos necesitan más
+    // Si el nodo ya tiene una clase de estado y su nivel es > 0,
+    // podría ser de una build cargada - verifiquemos si el estado sigue siendo válido
+    const hasStateClass = elem.classList.contains('node-efficient') || 
+                         elem.classList.contains('node-overleveled') || 
+                         elem.classList.contains('node-critical');
+    
+    if (hasStateClass && currentLevel > 0) {
+        // El nodo ya tiene un estado visual y tiene nivel > 0
+        // Verificar si el estado actual sigue siendo correcto
+        const requiredByChildren = calculateLevelRequiredByChildren(treeId, nodeId);
         const allowedMax = getAllowedMaxForNode(treeId, nodeId);
-        if (currentLevel < allowedMax && currentLevel < requiredByChildren) {
-            elem.classList.add('node-critical'); // ¡Hijos necesitan más!
+        
+        if (cfg.type === 'main') {
+            if (currentLevel === requiredByChildren && currentLevel > 0) {
+                // Estado CORRECTO: eficiente
+                if (!elem.classList.contains('node-efficient')) {
+                    elem.classList.remove('node-overleveled', 'node-critical');
+                    elem.classList.add('node-efficient');
+                }
+            } else if (currentLevel > requiredByChildren && requiredByChildren > 0) {
+                // Estado CORRECTO: sobre-nivelado
+                if (!elem.classList.contains('node-overleveled')) {
+                    elem.classList.remove('node-efficient', 'node-critical');
+                    elem.classList.add('node-overleveled');
+                }
+            } else {
+                // Estado INCORRECTO: limpiar
+                elem.classList.remove('node-efficient', 'node-overleveled', 'node-critical');
+                // Aplicar estado normal (continúa abajo)
+            }
+        } else {
+            if (currentLevel < allowedMax && currentLevel < requiredByChildren) {
+                // Estado CORRECTO: crítico
+                if (!elem.classList.contains('node-critical')) {
+                    elem.classList.remove('node-efficient', 'node-overleveled');
+                    elem.classList.add('node-critical');
+                }
+            } else {
+                // Estado INCORRECTO: limpiar
+                elem.classList.remove('node-efficient', 'node-overleveled', 'node-critical');
+                // Aplicar estado normal (continúa abajo)
+            }
+        }
+    }
+    
+    // ===== CÁLCULOS NORMALES (SI NO TENÍA ESTADO O ESTABA INCORRECTO) =====
+    if (!elem.classList.contains('node-efficient') && 
+        !elem.classList.contains('node-overleveled') && 
+        !elem.classList.contains('node-critical')) {
+        
+        // Calcular nivel mínimo requerido por los hijos
+        const requiredByChildren = calculateLevelRequiredByChildren(treeId, nodeId);
+        
+        if (cfg.type === 'main') {
+            // Para nodos principales: verde si está al nivel justo
+            if (currentLevel === requiredByChildren && currentLevel > 0) {
+                elem.classList.add('node-efficient'); // Justo lo necesario
+            } else if (currentLevel > requiredByChildren && requiredByChildren > 0) {
+                elem.classList.add('node-overleveled'); // Más de lo necesario
+            }
+        } else {
+            // Para otros nodos: rojo si hijos necesitan más
+            const allowedMax = getAllowedMaxForNode(treeId, nodeId);
+            if (currentLevel < allowedMax && currentLevel < requiredByChildren) {
+                elem.classList.add('node-critical'); // ¡Hijos necesitan más!
+            }
         }
     }
 }
-
 function refreshAllowedDisplays(treeId) {
     const state = treesState[treeId];
-    const container = document.querySelector(
-        `.tree-container[data-tree-id="${treeId}"]`
-    );
+    const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
 
     if (!container) return;
 
@@ -3963,25 +4011,37 @@ function refreshAllowedDisplays(treeId) {
         const allowedMax = getAllowedMaxForNode(treeId, id);
         const currentLvl = state.levels[id].current;
 
+        // ===== NUEVA LÓGICA MEJORADA =====
+        
+        // 1. Si el nodo ya tiene nivel > 0, probablemente fue cargado de una build
+        //    No lo bloqueemos automáticamente
+        if (currentLvl > 0 && currentLvl <= allowedMax) {
+            elem.classList.remove("node-locked");
+            updateNodeVisualState(treeId, id);
+            return;
+        }
+        
+        // 2. Verificar bloqueo de rama con más cuidado
         if (cfg.branch && state.lockedBranch && cfg.branch !== state.lockedBranch && cfg.type !== "final") {
-            // Si hay una rama bloqueada Y esta no es la rama bloqueada
             const finalNodeId = cfg.branch + "-final";
             const finalNode = state.levels[finalNodeId];
             const hasCompletedFinal = finalNode && finalNode.current > 0;
 
             if (!hasCompletedFinal) {
                 elem.classList.add("node-locked");
-                updateNodeVisualState(treeId, id); // Actualizar estado visual
+                updateNodeVisualState(treeId, id);
                 return;
             }
         }
 
+        // 3. Verificar exceso sobre padres
         if (checkChildExceedsParent(treeId, id)) {
             elem.classList.add("node-locked");
-            updateNodeVisualState(treeId, id); // Actualizar estado visual
+            updateNodeVisualState(treeId, id);
             return;
         }
 
+        // 4. Desbloquear si cumple requisitos
         if (currentLvl > 0) {
             elem.classList.remove("node-locked");
         } else if (allowedMax > 0) {
@@ -3990,7 +4050,6 @@ function refreshAllowedDisplays(treeId) {
             elem.classList.add("node-locked");
         }
         
-        // Actualizar estado visual
         updateNodeVisualState(treeId, id);
     });
 }
@@ -4235,6 +4294,7 @@ function updateNodeDisplay(treeId, nodeId) {
     const state = treesState[treeId];
     const lvl = state.levels[nodeId];
     const elem = getNodeElement(treeId, nodeId);
+    
     if (!cfg || !lvl || !elem) return;
 
     const levelSpan = elem.querySelector(".node-level");
@@ -4246,23 +4306,34 @@ function updateNodeDisplay(treeId, nodeId) {
         const maxLevel = cfg.max || 0;
         
         if (levelSpan) {
-            levelSpan.textContent = `${currentLevel}/${maxLevel}`;
-            // FORZAR ACTUALIZACIÓN PARA MÓVIL
-            if (isMobile) {
-                levelSpan.style.display = 'none';
-                void levelSpan.offsetWidth; // Re-flow
-                levelSpan.style.display = '';
+            // Solo actualizar si el valor REALMENTE cambió
+            const currentText = levelSpan.textContent;
+            const newText = `${currentLevel}/${maxLevel}`;
+            
+            if (currentText !== newText) {
+                levelSpan.textContent = newText;
+                // FORZAR ACTUALIZACIÓN PARA MÓVIL
+                if (isMobile) {
+                    levelSpan.style.display = 'none';
+                    void levelSpan.offsetWidth; // Re-flow
+                    levelSpan.style.display = '';
+                }
             }
         }
         
         if (costSpan) {
             const currentCost = calculateCurrentCost(nodeId, currentLevel);
-            costSpan.textContent = `C:${currentCost}`;
-            // FORZAR ACTUALIZACIÓN PARA MÓVIL
-            if (isMobile) {
-                costSpan.style.opacity = '0.99';
-                void costSpan.offsetWidth;
-                costSpan.style.opacity = '';
+            const currentText = costSpan.textContent;
+            const newText = `C:${currentCost}`;
+            
+            if (currentText !== newText) {
+                costSpan.textContent = newText;
+                // FORZAR ACTUALIZACIÓN PARA MÓVIL
+                if (isMobile) {
+                    costSpan.style.opacity = '0.99';
+                    void costSpan.offsetWidth;
+                    costSpan.style.opacity = '';
+                }
             }
         }
     }
@@ -5124,7 +5195,7 @@ function saveBuild(buildName) {
 // Cargar una build (VERSIÓN ROBUSTA PARA GITHUB PAGES)
  function loadBuild(buildName) {
     try {
-        console.log(`📂 Intentando cargar build "${buildName}"...`);
+        console.log(`📂 Cargando build "${buildName}"...`);
         
         let buildData = null;
         let source = "none";
@@ -5218,117 +5289,68 @@ function saveBuild(buildName) {
         console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
         console.log(`   • Puntos gastados: ${totalPointsSpent}`);
         
-        // ===== 3. ACTUALIZACIÓN ULTRA FORZADA DE UI =====
-        console.log("3. ACTUALIZACIÓN ULTRA FORZADA DE UI...");
+        // ===== 3. SINCRONIZACIÓN INTELIGENTE CON LAS 3 FUNCIONES CORREGIDAS =====
+        console.log("3. Sincronización inteligente...");
         
-        // A. Primero actualizar UI global INMEDIATAMENTE
+        // A. Primero actualizar recursos globales (rápido)
         updateGlobalUI();
         updateSpecificStatsDisplay();
         
-        // B. FUNCIÓN ESPECIAL PARA FORZAR ACTUALIZACIÓN
-        function forceNodeUpdate(treeId, nodeId) {
-            const elem = getNodeElement(treeId, nodeId);
-            if (!elem) return;
-            
-            const state = treesState[treeId];
-            const lvl = state?.levels?.[nodeId];
-            const cfg = getNodeConfig(nodeId);
-            
-            if (!lvl || !cfg) return;
-            
-            // ACTUALIZAR LOS TEXTOS DIRECTAMENTE
-            const levelSpan = elem.querySelector('.node-level');
-            const costSpan = elem.querySelector('.cost');
-            const titleSpan = elem.querySelector('.node-title');
-            
-            if (levelSpan && cfg.max > 0) {
-                levelSpan.textContent = `${lvl.current}/${cfg.max}`;
-                // FORZAR RE-RENDER
-                levelSpan.style.display = 'none';
-                void levelSpan.offsetWidth;
-                levelSpan.style.display = '';
-            }
-            
-            if (costSpan) {
-                const currentCost = calculateCurrentCost(nodeId, lvl.current);
-                costSpan.textContent = `C:${currentCost}`;
-                // FORZAR RE-RENDER
-                costSpan.style.opacity = '0.99';
-                void costSpan.offsetWidth;
-                costSpan.style.opacity = '1';
-            }
-            
-            if (titleSpan && cfg.type === "tertiary") {
-                titleSpan.textContent = getTertiaryDisplayTitle(treeId, nodeId);
-            }
-            
-            // ACTUALIZAR ESTADO VISUAL
-            updateNodeVisualState(treeId, nodeId);
-            
-            // TRUCO EXTRA PARA MÓVIL
-            if (isMobile) {
-                elem.style.transform = 'translateZ(0)';
-                void elem.offsetWidth;
-                elem.style.transform = '';
-            }
-        }
-        
-        // C. ACTUALIZAR TODOS LOS NODOS CON LA FUNCIÓN FORZADA
-        ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
-            const state = treesState[treeId];
-            if (!state || !state.levels) return;
-            
-            console.log(`   • Actualizando árbol ${treeId}...`);
-            
-            Object.keys(state.levels).forEach(nodeId => {
-                forceNodeUpdate(treeId, nodeId);
-            });
-            
-            refreshAllowedDisplays(treeId);
+        // B. Actualizar CADA árbol con timing optimizado
+        ['guardian', 'vanguardia', 'canon'].forEach((treeId, index) => {
+            setTimeout(() => {
+                const state = treesState[treeId];
+                if (!state || !state.levels) return;
+                
+                console.log(`   • Sincronizando árbol ${treeId}...`);
+                
+                // 1. Actualizar displays de TODOS los nodos
+                Object.keys(state.levels).forEach(nodeId => {
+                    updateNodeDisplay(treeId, nodeId);
+                });
+                
+                // 2. Aplicar estados visuales (colores) - la nueva función preserva estados válidos
+                Object.keys(state.levels).forEach(nodeId => {
+                    updateNodeVisualState(treeId, nodeId);
+                });
+                
+                // 3. Refresh de bloqueos - la nueva función respeta niveles > 0
+                refreshAllowedDisplays(treeId);
+                
+            }, index * 50); // Espaciar por árbol para mejor rendimiento
         });
         
-        // D. SINCRONIZACIÓN EXTRA CON DELAY MÚLTIPLE
+        // C. Sincronización final con delay para asegurar
         setTimeout(() => {
-            console.log("   • Sincronización extra (50ms)...");
-            forceSyncAllTrees();
-        }, 50);
-        
-        setTimeout(() => {
-            console.log("   • Sincronización final (150ms)...");
+            console.log("   • Sincronización final...");
             
-            // FORZAR ACTUALIZACIÓN DE LA PESTAÑA ACTIVA
+            // Forzar una última actualización de la pestaña activa
             const activeTab = document.querySelector('.tab-button.active');
             if (activeTab && activeTab.dataset.tab !== 'about') {
                 const treeId = activeTab.dataset.tab;
-                console.log(`   • Focus en pestaña activa: ${treeId}`);
-                
                 const state = treesState[treeId];
+                
                 if (state && state.levels) {
                     Object.keys(state.levels).forEach(nodeId => {
-                        if (state.levels[nodeId].current > 0) {
-                            const elem = getNodeElement(treeId, nodeId);
-                            if (elem) {
-                                // COLOR TEMPORAL para confirmar que se actualizó
-                                elem.style.borderColor = '#00ff00';
-                                elem.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.5)';
-                                
-                                setTimeout(() => {
-                                    elem.style.borderColor = '';
-                                    elem.style.boxShadow = '';
-                                }, 500);
-                            }
+                        const elem = getNodeElement(treeId, nodeId);
+                        if (elem && state.levels[nodeId].current > 0) {
+                            // Verificar que todo esté visible
+                            elem.style.opacity = '1';
+                            elem.style.visibility = 'visible';
                         }
                     });
                 }
             }
             
-            // ACTUALIZAR UI UNA VEZ MÁS
+            // Actualizar UI global una última vez
             updateGlobalUI();
             updateSpecificStatsDisplay();
             
+            // Log de éxito
             setLog(`✅ Build "${buildName}" cargada desde ${source}.`);
-            console.log("✅ Build cargada exitosamente");
-        }, 150);
+            console.log("✅ Build cargada exitosamente - sincronización completa");
+            
+        }, 200); // Dar tiempo a que todas las actualizaciones terminen
         
         // 4. Re-guardar en localStorage si se cargó de otra fuente
         if (source !== "localStorage") {
