@@ -4256,9 +4256,16 @@ nodeElem.addEventListener("touchmove", (e) => {
         container.appendChild(nodeElem);
 
         // INICIALIZAR ESTADO (NO sobreescribir si ya existe)
+// INICIALIZAR ESTADO (NO sobreescribir si ya existe)
 if (!state.levels[cfg.id]) {
-    // Solo crear si no existe, preservar datos existentes
-    state.levels[cfg.id] = state.levels[cfg.id] || { current: 0, max: cfg.max };
+    // Solo crear si no existe
+    state.levels[cfg.id] = { current: 0, max: cfg.max };
+}
+// Si YA existe, NO sobreescribir el valor current
+// Solo asegurar que tiene la estructura correcta
+else {
+    state.levels[cfg.id].max = cfg.max; // Actualizar max si es diferente
+    // ¡NO sobreescribir state.levels[cfg.id].current!
 }
     });
     // ============= FIN CREAR NODOS =============
@@ -4321,11 +4328,22 @@ function updateNodeDisplay(treeId, nodeId) {
             
             if (currentText !== newText) {
                 levelSpan.textContent = newText;
-                // FORZAR ACTUALIZACIÓN PARA MÓVIL
-                if (isMobile) {
+                
+                // ===== NUEVO: MEJORAS PARA MÓVIL =====
+                if (isMobile && !window.buildJustLoaded) {  // ← EVITAR durante carga de builds
+                    // Forzar visibilidad máxima
+                    levelSpan.style.opacity = '1';
+                    levelSpan.style.visibility = 'visible';
+                    levelSpan.style.zIndex = '5';
+                    
+                    // Truco para forzar re-renderizado en móvil
                     levelSpan.style.display = 'none';
                     void levelSpan.offsetWidth; // Re-flow
                     levelSpan.style.display = '';
+                    
+                    // Para Safari iOS
+                    levelSpan.style.webkitTransform = 'translateZ(0)';
+                    levelSpan.style.transform = 'translateZ(0)';
                 }
             }
         }
@@ -4337,11 +4355,21 @@ function updateNodeDisplay(treeId, nodeId) {
             
             if (currentText !== newText) {
                 costSpan.textContent = newText;
-                // FORZAR ACTUALIZACIÓN PARA MÓVIL
-                if (isMobile) {
-                    costSpan.style.opacity = '0.99';
+                
+                // ===== NUEVO: MEJORAS PARA MÓVIL =====
+                if (isMobile && !window.buildJustLoaded) {  // ← EVITAR durante carga de builds
+                    costSpan.style.opacity = '1';
+                    costSpan.style.visibility = 'visible';
+                    costSpan.style.zIndex = '5';
+                    
+                    // Truco para forzar re-renderizado
+                    costSpan.style.fontSize = '0.1px';
                     void costSpan.offsetWidth;
-                    costSpan.style.opacity = '';
+                    costSpan.style.fontSize = '';
+                    
+                    // Para Safari iOS
+                    costSpan.style.webkitTransform = 'translateZ(0)';
+                    costSpan.style.transform = 'translateZ(0)';
                 }
             }
         }
@@ -4352,23 +4380,114 @@ function updateNodeDisplay(treeId, nodeId) {
         const titleSpan = elem.querySelector(".node-title");
         if (titleSpan) {
             titleSpan.textContent = getTertiaryDisplayTitle(treeId, nodeId);
-            // FORZAR ACTUALIZACIÓN PARA MÓVIL
-            if (isMobile) {
+            
+            // ===== NUEVO: MEJORAS PARA MÓVIL =====
+            if (isMobile && !window.buildJustLoaded) {  // ← EVITAR durante carga de builds
+                titleSpan.style.opacity = '1';
+                titleSpan.style.visibility = 'visible';
+                titleSpan.style.zIndex = '5';
+                
+                // Truco para forzar re-renderizado
                 titleSpan.style.fontSize = '0px';
                 void titleSpan.offsetWidth;
                 titleSpan.style.fontSize = '';
+                
+                // Para Safari iOS
+                titleSpan.style.webkitTransform = 'translateZ(0)';
+                titleSpan.style.transform = 'translateZ(0)';
             }
         }
     }
     
-    // FORZAR ACTUALIZACIÓN COMPLETA DEL ELEMENTO EN MÓVIL
-    if (isMobile) {
-        elem.style.transform = 'translateZ(0)'; // Acelerar hardware
-        void elem.offsetWidth; // Re-flow forzado
+    // ===== NUEVO: FORZAR VISIBILIDAD COMPLETA EN MÓVIL =====
+    if (isMobile && !window.buildJustLoaded) {  // ← EVITAR durante carga de builds
+        // Asegurar que el elemento padre tenga capa GPU
+        elem.style.webkitTransform = 'translate3d(0,0,0)';
+        elem.style.transform = 'translate3d(0,0,0)';
+        
+        // Asegurar que sea visible
+        elem.style.opacity = '1';
+        elem.style.visibility = 'visible';
+        elem.style.zIndex = '2';
+        
+        // Forzar reflow completo
+        void elem.offsetWidth;
     }
 }
 
 // ======================== SINCRONIZACIÓN FORZADA (VERSIÓN ROBUSTA) ===========================
+function forceSyncAllTrees() {
+    console.log("🔄 forceSyncAllTrees() iniciando...");
+    
+    // ===== NUEVO: VERIFICACIÓN DE SEGURIDAD =====
+    // 1. Verificar si acabamos de cargar una build
+    if (window.buildJustLoaded) {
+        console.log("⏸️  forceSyncAllTrees pausada - build recién cargada");
+        
+        // Limpiar bandera después de tiempo seguro
+        setTimeout(() => {
+            window.buildJustLoaded = false;
+            console.log("🏷️  Bandera buildJustLoaded limpiada");
+        }, 3000);
+        
+        return; // ¡NO sincronizar después de cargar!
+    }
+    
+    // 2. Verificar si hay niveles > 0 en algún árbol
+    let totalNodesWithLevel = 0;
+    Object.keys(treesState).forEach(treeId => {
+        const state = treesState[treeId];
+        const nodesWithLevel = Object.keys(state.levels || {}).filter(id => 
+            state.levels[id]?.current > 0
+        );
+        totalNodesWithLevel += nodesWithLevel.length;
+    });
+    
+    if (totalNodesWithLevel === 0) {
+        console.log("⏭️  forceSyncAllTrees omitida - todos los nodos en 0");
+        return; // No hay nada que sincronizar
+    }
+    
+    console.log(`📊 Nodos con nivel > 0: ${totalNodesWithLevel}`);
+    
+    // ===== SINCRONIZACIÓN INTELIGENTE =====
+    // SIEMPRE actualizar todos los árboles para asegurar consistencia
+    const treesToUpdate = ['guardian', 'vanguardia', 'canon'];
+    
+    treesToUpdate.forEach((treeId, index) => {
+        // Espaciar actualizaciones para mejor rendimiento
+        setTimeout(() => {
+            const state = treesState[treeId];
+            const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
+            
+            if (!container || !state) return;
+            
+            // 1. Contar nodos activos en este árbol
+            const activeNodes = Object.keys(state.levels || {}).filter(id => 
+                state.levels[id]?.current > 0
+            );
+            
+            if (activeNodes.length === 0) {
+                // console.log(`   • ${treeId}: sin nodos activos, skip`);
+                return;
+            }
+            
+            console.log(`   • ${treeId}: ${activeNodes.length} nodos activos`);
+            
+            // 2. Para cada nodo en el estado
+            Object.keys(state.levels || {}).forEach(nodeId => {
+                const lvl = state.levels[nodeId];
+                const elem = container.querySelector(`.node[data-id="${nodeId}"]`);
+                
+                if (elem && lvl) {
+                    // VERIFICACIÓN EXTRA: ¿El nodo muestra el valor correcto?
+                    const levelSpan = elem.querySelector('.node-level');
+                    const cfg = getNodeConfig(nodeId);
+                    
+                    if (levelSpan && cfg) {
+                        const currentUI = levelSpan.textContent;
+                        const shouldBe = `${lvl.current}/${cfg.max}`;
+                        
 function forceSyncAllTrees() {
     console.log("🔄 forceSyncAllTrees() iniciando...");
     
@@ -4469,7 +4588,6 @@ function forceSyncAllTrees() {
     
     console.log("✅ forceSyncAllTrees() completada");
 }
-
 // ======================== ACTUALIZACIÓN VISUAL PARA MÓVIL ===========================
 function forceMobileVisualUpdate(treeId, nodeId) {
     if (!isMobile) return;
@@ -5746,13 +5864,14 @@ function reinitTreePreservingData(treeId) {
             }
             
             // Obtener nivel actual del estado (no resetear a 0)
-            const currentLevel = state.levels[cfg.id] ? state.levels[cfg.id].current : 0;
-            
-            nodeElem.innerHTML = `
-                <span class="node-title">${displayTitle}</span>
-                <span class="node-level">${currentLevel}/${cfg.max}</span>
-                <span class="cost">C:${calculateCurrentCost(cfg.id, currentLevel)}</span>
-            `;
+            // Obtener nivel actual del estado (¡NO usar 0 como valor fijo!)
+const currentLevel = state.levels[cfg.id] ? state.levels[cfg.id].current : 0;
+
+nodeElem.innerHTML = `
+    <span class="node-title">${displayTitle}</span>
+    <span class="node-level">${currentLevel}/${cfg.max}</span>
+    <span class="cost">C:${calculateCurrentCost(cfg.id, currentLevel)}</span>
+`;
         }
         
         // POSICIÓN Y TAMAÑO
