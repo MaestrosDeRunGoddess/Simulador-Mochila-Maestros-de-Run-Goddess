@@ -5430,6 +5430,215 @@ function loadBuild(buildName) {
                         }
                     });
                 }
+function loadBuild(buildName) {
+    try {
+        console.log(`📂 Cargando build "${buildName}"...`);
+        
+        // ===== BANDERA CRÍTICA: Indicar que estamos cargando una build =====
+        window.buildJustLoaded = true;
+        console.log("🏷️  Bandera buildJustLoaded activada");
+        
+        let buildData = null;
+        let source = "none";
+        
+        // 1. localStorage
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage !== null) {
+                const savedData = localStorage.getItem(`tech_tree_build_${buildName}`);
+                if (savedData) {
+                    buildData = JSON.parse(savedData);
+                    source = "localStorage";
+                    console.log("✅ Encontrado en localStorage");
+                }
+            }
+        } catch (lsError) {
+            console.warn("localStorage falló:", lsError);
+        }
+        
+        // 2. sessionStorage (fallback)
+        if (!buildData) {
+            try {
+                if (typeof sessionStorage !== 'undefined') {
+                    const savedData = sessionStorage.getItem(`tech_tree_build_${buildName}`);
+                    if (savedData) {
+                        buildData = JSON.parse(savedData);
+                        source = "sessionStorage";
+                        console.log("✅ Encontrado en sessionStorage");
+                    }
+                }
+            } catch (ssError) {
+                console.warn("sessionStorage falló:", ssError);
+            }
+        }
+        
+        // 3. Memoria (fallback final)
+        if (!buildData && window.fallbackStorage) {
+            buildData = window.fallbackStorage[`tech_tree_build_${buildName}`];
+            if (buildData) {
+                source = "memory";
+                console.log("✅ Encontrado en memoria");
+            }
+        }
+        
+        // 4. Si no se encuentra en ningún lado
+        if (!buildData) {
+            window.buildJustLoaded = false; // Limpiar bandera
+            setLog(`❌ Build "${buildName}" no encontrada en ningún almacenamiento.`);
+            console.error("Build no encontrada en:", {
+                localStorage: typeof localStorage,
+                sessionStorage: typeof sessionStorage,
+                fallbackStorage: !!window.fallbackStorage
+            });
+            return false;
+        }
+        
+        console.log(`✅ Build cargada desde: ${source}`);
+        
+        // CORRECCIÓN: Convertir unlockedNodes de Array a Set
+        function fixUnlockedNodes(state) {
+            if (!state) return { levels: {}, lockedBranch: null, unlockedNodes: new Set() };
+            
+            const fixedState = {
+                levels: state.levels || {},
+                lockedBranch: state.lockedBranch || null,
+                unlockedNodes: new Set()
+            };
+            
+            if (state.unlockedNodes) {
+                if (Array.isArray(state.unlockedNodes)) {
+                    fixedState.unlockedNodes = new Set(state.unlockedNodes);
+                } else if (state.unlockedNodes instanceof Set) {
+                    fixedState.unlockedNodes = state.unlockedNodes;
+                }
+            }
+            
+            return fixedState;
+        }
+        
+        // 1. RESTAURAR DATOS DIRECTAMENTE en el estado global
+        console.log("1. Restaurando datos de árboles...");
+        treesState.guardian = fixUnlockedNodes(buildData.guardian);
+        treesState.vanguardia = fixUnlockedNodes(buildData.vanguardia);
+        treesState.canon = fixUnlockedNodes(buildData.canon);
+        
+        // 2. RESTAURAR RECURSOS
+        console.log("2. Restaurando recursos...");
+        techPoints = buildData.techPoints !== undefined ? buildData.techPoints : 9999999;
+        globalFinalPointsLeft = buildData.globalFinalPointsLeft !== undefined ? buildData.globalFinalPointsLeft : 3;
+        totalPointsSpent = buildData.totalPointsSpent || 0;
+        
+        console.log(`   • Tech points: ${techPoints}`);
+        console.log(`   • Puntos final: ${globalFinalPointsLeft}`);
+        console.log(`   • Puntos gastados: ${totalPointsSpent}`);
+        
+        // 3. ACTUALIZACIÓN DIRECTA DE LA UI (SIN RECREAR ÁRBOLES COMPLETOS)
+        console.log("3. Actualización directa de UI...");
+        
+        // A. Primero actualizar recursos globales
+        updateGlobalUI();
+        updateSpecificStatsDisplay();
+        
+        // B. Para cada árbol, actualizar los displays SIN recrear árboles completos
+        ['guardian', 'vanguardia', 'canon'].forEach((treeId, index) => {
+            setTimeout(() => {
+                const state = treesState[treeId];
+                if (!state || !state.levels) return;
+                
+                console.log(`   • Actualizando árbol ${treeId}...`);
+                
+                // 1. Actualizar displays de TODOS los nodos VISUALMENTE
+                Object.keys(state.levels).forEach(nodeId => {
+                    const elem = getNodeElement(treeId, nodeId);
+                    if (elem) {
+                        // Obtener nivel actual del estado
+                        const currentLevel = state.levels[nodeId] ? state.levels[nodeId].current : 0;
+                        const cfg = getNodeConfig(nodeId);
+                        
+                        // Actualizar el HTML interno directamente
+                        const levelSpan = elem.querySelector('.node-level');
+                        const costSpan = elem.querySelector('.cost');
+                        const titleSpan = elem.querySelector('.node-title');
+                        
+                        if (levelSpan && cfg) {
+                            levelSpan.textContent = `${currentLevel}/${cfg.max}`;
+                            // Forzar visibilidad
+                            levelSpan.style.opacity = '1';
+                            levelSpan.style.visibility = 'visible';
+                        }
+                        
+                        if (costSpan) {
+                            const currentCost = calculateCurrentCost(nodeId, currentLevel);
+                            costSpan.textContent = `C:${currentCost}`;
+                            costSpan.style.opacity = '1';
+                            costSpan.style.visibility = 'visible';
+                        }
+                        
+                        if (titleSpan && cfg.type === "tertiary") {
+                            titleSpan.textContent = getTertiaryDisplayTitle(treeId, nodeId);
+                        }
+                        
+                        // Forzar reflow para móviles
+                        if (isMobile) {
+                            elem.style.transform = 'translateZ(0)';
+                            void elem.offsetWidth;
+                            elem.style.transform = '';
+                        }
+                    }
+                });
+                
+                // 2. Aplicar estados visuales (colores)
+                Object.keys(state.levels).forEach(nodeId => {
+                    updateNodeVisualState(treeId, nodeId);
+                });
+                
+                // 3. Refresh de bloqueos
+                refreshAllowedDisplays(treeId);
+                
+            }, index * 50);
+        });
+        
+        // 4. Sincronización final con delay para asegurar
+        setTimeout(() => {
+            console.log("4. Sincronización final...");
+            
+            // Forzar actualización de la pestaña activa
+            const activeTab = document.querySelector('.tab-button.active');
+            if (activeTab && activeTab.dataset.tab !== 'about') {
+                const treeId = activeTab.dataset.tab;
+                const state = treesState[treeId];
+                
+                if (state && state.levels) {
+                    console.log(`   • Forzando actualización visual para ${treeId}`);
+                    
+                    Object.keys(state.levels).forEach(nodeId => {
+                        const elem = getNodeElement(treeId, nodeId);
+                        if (elem) {
+                            const currentLevel = state.levels[nodeId]?.current || 0;
+                            
+                            // Si el nodo tiene nivel > 0, asegurar que sea visible
+                            if (currentLevel > 0) {
+                                elem.style.opacity = '1';
+                                elem.style.visibility = 'visible';
+                                
+                                // Forzar todos los spans visibles
+                                const spans = elem.querySelectorAll('span');
+                                spans.forEach(span => {
+                                    span.style.opacity = '1';
+                                    span.style.visibility = 'visible';
+                                    span.style.display = '';
+                                });
+                                
+                                // Truco para Safari iOS
+                                if (isMobile) {
+                                    elem.style.zIndex = '10';
+                                    setTimeout(() => {
+                                        elem.style.zIndex = '';
+                                    }, 100);
+                                }
+                            }
+                        }
+                    });
+                }
             }
             
             // Actualizar UI global una última vez
@@ -5440,14 +5649,20 @@ function loadBuild(buildName) {
             setLog(`✅ Build "${buildName}" cargada desde ${source}.`);
             console.log("✅ Build cargada exitosamente - sincronización completa");
             
-        }, 200); // Dar tiempo a que todas las actualizaciones terminen
+            // ===== LIMPIAR BANDERA DESPUÉS DE TIEMPO SEGURO =====
+            setTimeout(() => {
+                window.buildJustLoaded = false;
+                console.log("🏷️  Bandera buildJustLoaded desactivada");
+            }, 3000);
+            
+        }, 300); // Dar tiempo a que todas las actualizaciones terminen
         
-        // 4. Re-guardar en localStorage si se cargó de otra fuente
+        // 5. Re-guardar en localStorage si se cargó de otra fuente
         if (source !== "localStorage") {
             setTimeout(() => {
                 console.log("🔄 Re-guardando en localStorage...");
                 saveBuild(buildName);
-            }, 1000);
+            }, 1500);
         }
         
         return true;
@@ -5455,10 +5670,10 @@ function loadBuild(buildName) {
     } catch (e) {
         console.error('❌ Error crítico en loadBuild:', e);
         setLog('❌ Error al cargar la build. Los datos pueden estar corruptos.');
+        window.buildJustLoaded = false; // Limpiar bandera en caso de error
         return false;
     }
 }
-
 // NUEVA FUNCIÓN: Re-inicializar árbol visualmente sin perder datos
 function reinitTreePreservingData(treeId) {
     const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
