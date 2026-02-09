@@ -3740,79 +3740,6 @@ function performSingleUpgrade(treeId, nodeId) {
         
         if (!hasCompletedFinal) {
             state.lockedBranch = cfg.branch;
-        //    console.log(`🔒 Rama ${cfg.branch} bloqueada por ${nodeId} nivel 1`);
-        }
-    }
-    
-    // 10. Si es nodo final completado, desbloquear rama
-    if (cfg.type === "final" && lvl.current >= 1) {
-        state.lockedBranch = null;
-function performSingleUpgrade(treeId, nodeId) {
-    const state = treesState[treeId];
-    const cfg = getNodeConfig(nodeId);
-    const lvl = state.levels[nodeId];
-    
-    if (!cfg || !lvl) return false;
-    
-    // 1. Calcular costo CORRECTAMENTE
-    const costToUpgrade = calculateCurrentCost(nodeId, lvl.current);
-    
-    // 2. Verificar si alcanzó el máximo
-    if (lvl.current >= cfg.max) {
-        setLog("Límite alcanzado.");
-        return false;
-    }
-    
-    // 3. Verificar puntos
-    if (techPoints < costToUpgrade) {
-        setLog(`Necesitas ${costToUpgrade} puntos de tecnologia.`);
-        return false;
-    }
-    
-    // 4. Verificar rama bloqueada (excepto nodos finales)
-    if (cfg.branch && cfg.type !== "final") {
-        const lockedBranch = state.lockedBranch;
-        const finalNodeId = cfg.branch + "-final";
-        const finalNode = state.levels[finalNodeId];
-        const hasCompletedFinal = finalNode && finalNode.current > 0;
-        
-        if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
-            setLog("Otra rama bloquea esta.");
-            return false;
-        }
-    }
-    
-    // 5. Verificar si es final y hay puntos globales
-    if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
-        setLog("No quedan Daños Finales disponibles.");
-        return false;
-    }
-    
-    // 6. VERIFICAR LÍMITE DE PADRES (MUY IMPORTANTE)
-    const allowedMax = getAllowedMaxForNode(treeId, nodeId);
-    if (lvl.current >= allowedMax) {
-        setLog("No puedes subir más por limitación de padres.");
-        return false;
-    }
-    
-    // 7. APLICAR UPGRADE
-    techPoints -= costToUpgrade;
-    totalPointsSpent += costToUpgrade;
-    lvl.current += 1;
-    
-    // 8. Si es nodo final, consumir punto global
-    if (cfg.type === "final") {
-        globalFinalPointsLeft -= 1;
-    }
-    
-    // 9. Si es nodo principal y es el PRIMER nivel, bloquear rama
-    if (cfg.branch && cfg.type === "main" && lvl.current === 1 && !state.lockedBranch) {
-        const finalNodeId = cfg.branch + "-final";
-        const finalNode = state.levels[finalNodeId];
-        const hasCompletedFinal = finalNode && finalNode.current > 0;
-        
-        if (!hasCompletedFinal) {
-            state.lockedBranch = cfg.branch;
             console.log(`🔒 Rama ${cfg.branch} bloqueada por ${nodeId} nivel 1`);
         }
     }
@@ -3926,6 +3853,7 @@ function performSingleDowngrade(treeId, nodeId) {
     
     return true;
 }
+
 // NUEVA: Original handleNodeUpgrade (se mantiene para main y root)
 function originalHandleNodeUpgrade(treeId, nodeElem) {
     const state = treesState[treeId];
@@ -3996,7 +3924,6 @@ function handleNodeUpgrade(treeId, nodeElem) {
 
 // NUEVA: Actualizar estado visual de nodos
 // Función para actualizar estado visual de un nodo (colores)
-function updateNodeVisualState(treeId, nodeId) {
 function updateNodeVisualState(treeId, nodeId) {
     const elem = getNodeElement(treeId, nodeId);
     if (!elem) return;
@@ -4078,6 +4005,7 @@ function updateNodeVisualState(treeId, nodeId) {
         }
     }
 }
+
 function refreshAllowedDisplays(treeId) {
     const state = treesState[treeId];
     const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
@@ -4620,7 +4548,9 @@ function forceMobileVisualUpdate(treeId, nodeId) {
         elem.style.transform = '';
     }, 100);
 }
-// FUNCIONES DE RESET
+
+// FUNCIONES RESET
+
 function resetAll() {
     let totalRefund = 0;
     
@@ -4743,7 +4673,7 @@ function resetCurrentTab() {
     // 9. Log
     setLog(`Pestaña ${tabId} reiniciada. +${totalRefund} pts.`);
 }
-  
+
 // Función para traducir nodos del árbol
 function translateTreeNodes(treeId, texts) {
     const container = document.querySelector(`.tree-container[data-tree-id="${treeId}"]`);
@@ -5353,7 +5283,7 @@ function saveBuild(buildName) {
 }
 
 // Cargar una build (VERSIÓN ROBUSTA PARA GITHUB PAGES)
- function loadBuild(buildName) {
+function loadBuild(buildName) {
     try {
         console.log(`📂 Cargando build "${buildName}"...`);
         
