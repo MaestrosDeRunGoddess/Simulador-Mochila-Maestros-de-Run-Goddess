@@ -3747,24 +3747,101 @@ function performSingleUpgrade(treeId, nodeId) {
     // 10. Si es nodo final completado, desbloquear rama
     if (cfg.type === "final" && lvl.current >= 1) {
         state.lockedBranch = null;
+function performSingleUpgrade(treeId, nodeId) {
+    const state = treesState[treeId];
+    const cfg = getNodeConfig(nodeId);
+    const lvl = state.levels[nodeId];
+    
+    if (!cfg || !lvl) return false;
+    
+    // 1. Calcular costo CORRECTAMENTE
+    const costToUpgrade = calculateCurrentCost(nodeId, lvl.current);
+    
+    // 2. Verificar si alcanzó el máximo
+    if (lvl.current >= cfg.max) {
+        setLog("Límite alcanzado.");
+        return false;
+    }
+    
+    // 3. Verificar puntos
+    if (techPoints < costToUpgrade) {
+        setLog(`Necesitas ${costToUpgrade} puntos de tecnologia.`);
+        return false;
+    }
+    
+    // 4. Verificar rama bloqueada (excepto nodos finales)
+    if (cfg.branch && cfg.type !== "final") {
+        const lockedBranch = state.lockedBranch;
+        const finalNodeId = cfg.branch + "-final";
+        const finalNode = state.levels[finalNodeId];
+        const hasCompletedFinal = finalNode && finalNode.current > 0;
+        
+        if (lockedBranch && lockedBranch !== cfg.branch && !hasCompletedFinal) {
+            setLog("Otra rama bloquea esta.");
+            return false;
+        }
+    }
+    
+    // 5. Verificar si es final y hay puntos globales
+    if (cfg.type === "final" && globalFinalPointsLeft <= 0) {
+        setLog("No quedan Daños Finales disponibles.");
+        return false;
+    }
+    
+    // 6. VERIFICAR LÍMITE DE PADRES (MUY IMPORTANTE)
+    const allowedMax = getAllowedMaxForNode(treeId, nodeId);
+    if (lvl.current >= allowedMax) {
+        setLog("No puedes subir más por limitación de padres.");
+        return false;
+    }
+    
+    // 7. APLICAR UPGRADE
+    techPoints -= costToUpgrade;
+    totalPointsSpent += costToUpgrade;
+    lvl.current += 1;
+    
+    // 8. Si es nodo final, consumir punto global
+    if (cfg.type === "final") {
+        globalFinalPointsLeft -= 1;
+    }
+    
+    // 9. Si es nodo principal y es el PRIMER nivel, bloquear rama
+    if (cfg.branch && cfg.type === "main" && lvl.current === 1 && !state.lockedBranch) {
+        const finalNodeId = cfg.branch + "-final";
+        const finalNode = state.levels[finalNodeId];
+        const hasCompletedFinal = finalNode && finalNode.current > 0;
+        
+        if (!hasCompletedFinal) {
+            state.lockedBranch = cfg.branch;
+            console.log(`🔒 Rama ${cfg.branch} bloqueada por ${nodeId} nivel 1`);
+        }
+    }
+    
+    // 10. Si es nodo final completado, desbloquear rama
+    if (cfg.type === "final" && lvl.current >= 1) {
+        state.lockedBranch = null;
         console.log(`🔓 Rama ${cfg.branch} desbloqueada (final completado)`);
     }
     
-   // 11. Actualizar visual
-updateNodeDisplay(treeId, nodeId);
-updateNodeVisualState(treeId, nodeId);
-updateGlobalUI();
+    // 11. Actualizar visual
+    updateNodeDisplay(treeId, nodeId);
+    updateNodeVisualState(treeId, nodeId);
+    updateGlobalUI();
 
-// 11b. ACTUALIZACIÓN ESPECIAL PARA MÓVIL
-if (isMobile) {
-    forceMobileVisualUpdate(treeId, nodeId);
-    // También forzar actualización de padres inmediatos
-    if (cfg.parents) {
-        cfg.parents.forEach(parentId => {
-            setTimeout(() => forceMobileVisualUpdate(treeId, parentId), 10);
-        });
+    // 11b. ACTUALIZACIÓN ESPECIAL PARA MÓVIL - CON BANDERA DE BUILD
+    if (isMobile && !window.buildJustLoaded) {  // ← NUEVA CONDICIÓN
+        forceMobileVisualUpdate(treeId, nodeId);
+        // También forzar actualización de padres inmediatos
+        if (cfg.parents) {
+            cfg.parents.forEach(parentId => {
+                setTimeout(() => {
+                    if (!window.buildJustLoaded) {  // ← VERIFICAR
+                        forceMobileVisualUpdate(treeId, parentId);
+                    }
+                }, 10);
+            });
+        }
     }
-}
     
     // 12. Actualizar estado de desbloqueo si es necesario
     if (!state.unlockedNodes.has(nodeId)) {
@@ -3820,18 +3897,23 @@ function performSingleDowngrade(treeId, nodeId) {
     }
     
     // 6. Actualizar visual
-updateNodeDisplay(treeId, nodeId);
-updateNodeVisualState(treeId, nodeId);
-updateGlobalUI();
+    updateNodeDisplay(treeId, nodeId);
+    updateNodeVisualState(treeId, nodeId);
+    updateGlobalUI();
 
-// 6b. ACTUALIZACIÓN ESPECIAL PARA MÓVIL
-if (isMobile) {
-    forceMobileVisualUpdate(treeId, nodeId);
-    // Forzar actualización de hijos que podrían verse afectados
-    setTimeout(() => {
+    // 6b. ACTUALIZACIÓN ESPECIAL PARA MÓVIL - CON BANDERA DE BUILD
+    if (isMobile && !window.buildJustLoaded) {  // ← NUEVA CONDICIÓN
+        forceMobileVisualUpdate(treeId, nodeId);
+        // Forzar actualización de hijos que podrían verse afectados
+        setTimeout(() => {
+            if (!window.buildJustLoaded) {  // ← VERIFICAR
+                refreshAllowedDisplays(treeId);
+            }
+        }, 30);
+    } else {
+        // Si no es móvil, actualizar normalmente
         refreshAllowedDisplays(treeId);
-    }, 30);
-}
+    }
     
     // 7. Log
     setLog(`Bajaste 1 nivel en ${cfg.title}. +${costToRefund} pts.`);
@@ -3844,7 +3926,6 @@ if (isMobile) {
     
     return true;
 }
-
 // NUEVA: Original handleNodeUpgrade (se mantiene para main y root)
 function originalHandleNodeUpgrade(treeId, nodeElem) {
     const state = treesState[treeId];
