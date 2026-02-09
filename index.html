@@ -4474,43 +4474,57 @@ function forceMobileVisualUpdate(treeId, nodeId) {
     
     if (!cfg || !lvl) return;
     
+    // ===== NUEVO: VERIFICACIÓN DE SEGURIDAD =====
+    // Si estamos cargando una build, NO forzar actualización móvil
+    if (window.buildJustLoaded) {
+        console.log(`⏸️  forceMobileVisualUpdate pausada para ${nodeId} (build cargada)`);
+        return;
+    }
+    
+    // Verificar si el valor en memoria es consistente
+    if (lvl.current === 0 && window.buildJustLoaded) {
+        console.warn(`⚠️  forceMobileVisualUpdate: ${nodeId} tiene current=0 durante carga`);
+        // No actualizar, esperar a que loadBuild() termine
+        return;
+    }
+    
     // 1. Asegurar que el elemento esté en capa GPU
     elem.style.transform = 'translateZ(0)';
     
-    // 2. Actualizar texto con truco anti-flicker
+    // 2. Obtener valores actuales en UI
     const levelSpan = elem.querySelector(".node-level");
     const costSpan = elem.querySelector(".cost");
     const titleSpan = elem.querySelector(".node-title");
     
-    const updateSpan = (span, text) => {
-        if (span) {
-            // Guardar posición de scroll
-            const scrollTop = document.documentElement.scrollTop;
-            
-            // Actualizar texto
-            span.textContent = text;
-            
-            // Forzar reflow con truco de opacity
-            span.style.opacity = '0.999';
-            void span.offsetWidth;
-            span.style.opacity = '1';
-            
-            // Restaurar posición de scroll (evita saltos)
-            document.documentElement.scrollTop = scrollTop;
-        }
-    };
-    
+    // 3. Verificar si YA muestra el valor correcto
     if (levelSpan && cfg.max > 0) {
-        updateSpan(levelSpan, `${lvl.current}/${cfg.max}`);
-    }
-    
-    if (costSpan) {
-        const currentCost = calculateCurrentCost(nodeId, lvl.current);
-        updateSpan(costSpan, `C:${currentCost}`);
-    }
-    
-    if (titleSpan && cfg.type === "tertiary") {
-        updateSpan(titleSpan, getTertiaryDisplayTitle(treeId, nodeId));
+        const currentUI = levelSpan.textContent;
+        const shouldBe = `${lvl.current}/${cfg.max}`;
+        
+        // Solo actualizar si es NECESARIO
+        if (currentUI !== shouldBe) {
+            console.log(`📱 forceMobileVisualUpdate: ${nodeId} ${currentUI} → ${shouldBe}`);
+            
+            const updateSpan = (span, text) => {
+                if (span) {
+                    span.textContent = text;
+                    // Truco para móvil
+                    span.style.opacity = '0.999';
+                    void span.offsetWidth;
+                    span.style.opacity = '1';
+                }
+            };
+            
+            updateSpan(levelSpan, shouldBe);
+            
+            if (costSpan) {
+                const currentCost = calculateCurrentCost(nodeId, lvl.current);
+                updateSpan(costSpan, `C:${currentCost}`);
+            }
+        } else {
+            // Ya muestra el valor correcto, no hacer nada
+            // console.log(`📱 ${nodeId} ya muestra ${shouldBe}, skip`);
+        }
     }
     
     // 3. Forzar reflow completo
