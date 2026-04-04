@@ -94,7 +94,7 @@
       border-radius: 4px 4px 0 0;
       border: 1px solid #444;
       border-bottom: none;
-      background: #11727;
+      background: #111727;
       color: #eee;
       cursor: pointer;
       font-size: 12px;
@@ -413,15 +413,13 @@
         width: 65px !important;
         height: 65px !important;
         font-size: 9px !important;
+        -webkit-transform: translate3d(0,0,0);
+        transform: translate3d(0,0,0);
       }
       .node-level, .cost, .node-title {
         will-change: contents;
         backface-visibility: hidden;
         -webkit-font-smoothing: antialiased;
-      }
-      .node {
-        -webkit-transform: translate3d(0,0,0);
-        transform: translate3d(0,0,0);
       }
     }
 
@@ -431,6 +429,138 @@
 
     @media (max-width: 400px) {
       .node { width: 55px !important; height: 55px !important; font-size: 7px !important; }
+    }
+
+    /* =============================================
+       COMPARADOR DE BUILDS SIDE BY SIDE
+       ============================================= */
+    #comparator-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 9000;
+      overflow-y: auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    #comparator-modal.open { display: flex; flex-direction: column; align-items: center; }
+
+    .comparator-box {
+      background: #0c1120;
+      border: 1px solid #2a3a5c;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 1100px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .comparator-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      border-bottom: 1px solid #2a3a5c;
+      padding-bottom: 14px;
+    }
+    .comparator-header h2 { font-size: 1.3rem; color: #1e90ff; margin: 0; }
+
+    #close-comparator {
+      background: transparent;
+      border: 1px solid #ff4757;
+      color: #ff4757;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      min-width: auto;
+    }
+    #close-comparator:hover { background: #ff4757; color: white; }
+
+    .comparator-selectors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .comparator-selector-col label {
+      display: block;
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+    .comparator-selector-col select {
+      width: 100%;
+      padding: 7px 10px;
+      background: #111727;
+      color: #eee;
+      border: 1px solid #2a3a5c;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .comparator-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .comp-col {
+      background: rgba(20,25,45,0.6);
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .comp-col h3 {
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 14px;
+      color: #1e90ff;
+      border-bottom: 1px solid #2a3a5c;
+      padding-bottom: 8px;
+    }
+
+    .comp-stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 12px;
+    }
+    .comp-stat-label { color: #aaa; }
+    .comp-stat-value { font-weight: bold; color: #00ce9d; }
+    .comp-stat-value.better { color: #00ff80; }
+    .comp-stat-value.worse  { color: #ff4757; }
+    .comp-stat-value.equal  { color: #ffd700; }
+
+    .comp-empty {
+      text-align: center;
+      color: #555;
+      padding: 30px 0;
+      font-size: 13px;
+    }
+
+    .comp-section-title {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 12px 0 6px;
+    }
+
+    #open-comparator-btn {
+      background: #4361ee;
+      margin-top: 8px;
+      width: 100%;
+    }
+    #open-comparator-btn:hover { background: #3451d1; }
+
+    @media (max-width: 700px) {
+      .comparator-selectors,
+      .comparator-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -452,7 +582,7 @@
     Puntos de tecnología: <span id="tech-points">9999999</span>
     </div>
     <div id="global-info">
-    Puntos globales de <b>Daño Final</b> disponibles: <span id="global-final-left">3</span><br />
+    Puntos globales de <strong>Daño Final</strong> disponibles: <span id="global-final-left">3</span><br />
     Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.
     </div>
 </div>
@@ -509,7 +639,7 @@
 <div class="main-layout">
     <!-- CONTENEDOR DEL ÁRBOL (IZQUIERDA - 70%) -->
     <div class="tree-main-container" id="tree-container">
-        <center><h3>Árbol de Habilidades - <span id="current-tab-name">Guardian</span></h3></center>
+        <h3 style="text-align:center">Árbol de Habilidades - <span id="current-tab-name">Guardian</span></h3>
         <div class="tree-container-wrapper">
             <div id="guardian" class="tab-content">
                 <div class="tree-container" data-tree-id="guardian"></div>
@@ -587,6 +717,8 @@
                 <button id="delete-all-builds" style="background: transparent; border: 1px solid #ff4757; color: #ff4757; padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 10px; display: none;">
                     🗑️ Borrar Todas las Builds
                 </button>
+                
+                <button id="open-comparator-btn">&#9878;&#65039; Comparar Builds</button>
             </div>
         </div>
         
@@ -603,7 +735,7 @@ const translations = {
         "Árbol de Tecnologías": "Árbol de Tecnologías",
         "Árbol de Habilidades - ": "Árbol de Habilidades - ",
         "Puntos de tecnología: ": "Puntos de tecnología: ",
-        "Puntos globales de <b>Daño Final</b> disponibles: ": "Puntos globales de <b>Daño Final</b> disponibles: ",
+        "Puntos globales de <strong>Daño Final</strong> disponibles: ": "Puntos globales de <strong>Daño Final</strong> disponibles: ",
         "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.",
         "Guardian": "Guardian",
         "Vanguardia": "Vanguardia",
@@ -689,7 +821,7 @@ const translations = {
         "Árbol de Tecnologías": "Technology Tree",
         "Árbol de Habilidades - ": "Skill Tree - ",
         "Puntos de tecnología: ": "Tech points: ",
-        "Puntos globales de <b>Daño Final</b> disponibles: ": "Global <b>Final Damage</b> points available: ",
+        "Puntos globales de <strong>Daño Final</strong> disponibles: ": "Global <b>Final Damage</b> points available: ",
         "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Rule: when investing in a branch, the other two are locked until Final Damage is obtained.",
         "Guardian": "Guardian",
         "Vanguardia": "Vanguard",
@@ -775,7 +907,7 @@ const translations = {
         "Árbol de Tecnologías": "Arbre Technologique",
         "Árbol de Habilidades - ": "Arbre de Compétences - ",
         "Puntos de tecnología: ": "Points technologiques: ",
-        "Puntos globales de <b>Daño Final</b> disponibles: ": "Points de <b>Dégâts Finaux</b> disponibles: ",
+        "Puntos globales de <strong>Daño Final</strong> disponibles: ": "Points de <b>Dégâts Finaux</b> disponibles: ",
         "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Règle : en investissant dans une branche, les deux autres sont bloquées jusqu'à l'obtention des Dégâts Finaux.",
         "Guardian": "Gardien",
         "Vanguardia": "Avant-garde",
@@ -861,7 +993,7 @@ const translations = {
         "Árbol de Tecnologías": "Technologiebaum",
         "Árbol de Habilidades - ": "Fähigkeitenbaum - ",
         "Puntos de tecnología: ": "Technologiepunkte: ",
-        "Puntos globales de <b>Daño Final</b> disponibles: ": "Globale <b>Endschaden</b>-Punkte verfügbar: ",
+        "Puntos globales de <strong>Daño Final</strong> disponibles: ": "Globale <b>Endschaden</b>-Punkte verfügbar: ",
         "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Regel: Bei Investition in einen Zweig sind die anderen beiden gesperrt, bis Endschaden erreicht ist.",
         "Guardian": "Wächter",
         "Vanguardia": "Vorhut",
@@ -947,7 +1079,7 @@ const translations = {
         "Árbol de Tecnologías": "Árvore Tecnológica",
         "Árbol de Habilidades - ": "Árvore de Habilidades - ",
         "Puntos de tecnología: ": "Pontos de tecnologia: ",
-        "Puntos globales de <b>Daño Final</b> disponibles: ": "Pontos globais de <b>Dano Final</b> disponíveis: ",
+        "Puntos globales de <strong>Daño Final</strong> disponibles: ": "Pontos globais de <b>Dano Final</b> disponíveis: ",
         "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "Regra: ao investir em um ramo, os outros dois são bloqueados até obter o Dano Final.",
         "Guardian": "Guardião",
         "Vanguardia": "Vanguarda",
@@ -1033,7 +1165,7 @@ const translations = {
         "Árbol de Tecnologías": "科技树",
         "Árbol de Habilidades - ": "技能树 - ",
         "Puntos de tecnología: ": "科技点: ",
-        "Puntos globales de <b>Daño Final</b> disponibles: ": "全局<b>最终伤害</b>点数可用: ",
+        "Puntos globales de <strong>Daño Final</strong> disponibles: ": "全局<b>最终伤害</b>点数可用: ",
         "Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final.": "规则：投资一个分支时，其他两个分支将被锁定，直到获得最终伤害。",
         "Guardian": "守护者",
         "Vanguardia": "先锋",
@@ -3881,7 +4013,7 @@ function changeLanguage(lang) {
     const finalLeftSpan = document.getElementById('global-final-left');
     if (finalLeftSpan) {
         const finalPoints = finalLeftSpan.textContent;
-        document.querySelector('#global-info').innerHTML = texts["Puntos globales de <b>Daño Final</b> disponibles: "] + 
+        document.querySelector('#global-info').innerHTML = texts["Puntos globales de <strong>Daño Final</strong> disponibles: "] + 
             `<span id="global-final-left">${finalPoints}</span><br />` + 
             texts["Regla: al invertir en una rama, las otras dos se bloquean hasta conseguir el Daño Final."];
     }
@@ -4204,5 +4336,41 @@ window.addEventListener('load', () => {
     }, 100);
 });
 </script>
+
+<!-- =============================================
+     MODAL COMPARADOR DE BUILDS
+     ============================================= -->
+<div id="comparator-modal">
+  <div class="comparator-box">
+    <div class="comparator-header">
+      <h2>&#9878;&#65039; Comparador de Builds</h2>
+      <button id="close-comparator">&#10005; Cerrar</button>
+    </div>
+
+    <div class="comparator-selectors">
+      <div class="comparator-selector-col">
+        <label>&#128309; Build A</label>
+        <select id="comp-select-a">
+          <option value="">&#8212; Seleccionar build &#8212;</option>
+        </select>
+      </div>
+      <div class="comparator-selector-col">
+        <label>&#128308; Build B</label>
+        <select id="comp-select-b">
+          <option value="">&#8212; Seleccionar build &#8212;</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="comparator-grid">
+      <div class="comp-col" id="comp-col-a">
+        <div class="comp-empty">Selecciona una build</div>
+      </div>
+      <div class="comp-col" id="comp-col-b">
+        <div class="comp-empty">Selecciona una build</div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
