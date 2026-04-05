@@ -503,7 +503,7 @@
 
     .comparator-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 16px;
     }
 
@@ -512,7 +512,26 @@
       border: 1px solid #2a3a5c;
       border-radius: 8px;
       padding: 14px;
+      overflow-x: auto;
     }
+    
+    .comp-table {
+      width: 100% !important;
+    }
+    
+    .comp-table th {
+      font-weight: bold;
+      background: rgba(50,50,80,0.4) !important;
+    }
+    
+    .comp-table td, .comp-table th {
+      border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+    }
+    
+    .comp-table .better { color: #00ff80 !important; }
+    .comp-table .worse  { color: #ff4757 !important; }
+    .comp-table .equal  { color: #ffd700 !important; }
+    
     .comp-col h3 {
       text-align: center;
       font-size: 14px;
@@ -623,7 +642,7 @@
         <div class="about-section technical">
             <h3>⚙️ Información Técnica</h3>
             <p><strong>Versión:</strong> 2.0</p>
-            <p><strong>Última actualización:</strong> 11 de enero de 2025</p>
+            <p><strong>Última actualización:</strong> 4 de abril de 2026</p>
             <p><strong>Idiomas disponibles:</strong> Español, Inglés, Francés, Alemán, Portugués, Chino</p>
             <p><strong>Compatibilidad:</strong> Desktop y móvil</p>
         </div>
@@ -815,7 +834,13 @@ const translations = {
         "Crit.Hab": "Crit.Hab",
         "Penetrac": "Penetrac",
         "Gol.Crit": "Gol.Crit",
-        "Res.Crit": "Res.Crit"
+        "Res.Crit": "Res.Crit",
+        "Puntos gastados": "Puntos gastados",
+        "Niveles totales": "Niveles totales",
+        "Bonificaciones por stat": "Bonificaciones por stat",
+        "Sin stats activos": "Sin stats activos",
+        "Guardado": "Guardado",
+        "Porcentaje de inversión": "Porcentaje de inversión"
     },
     en: {
         "Árbol de Tecnologías": "Technology Tree",
@@ -901,7 +926,13 @@ const translations = {
         "Crit.Hab": "Skill Crit",
         "Penetrac": "Penetration",
         "Gol.Crit": "Crit Hit",
-        "Res.Crit": "Res.Crit"
+        "Res.Crit": "Res.Crit",
+        "Puntos gastados": "Points spent",
+        "Niveles totales": "Total levels",
+        "Bonificaciones por stat": "Stat bonuses",
+        "Sin stats activos": "No active stats",
+        "Guardado": "Saved",
+        "Porcentaje de inversión": "Investment percentage"
     },
     fr: {
         "Árbol de Tecnologías": "Arbre Technologique",
@@ -987,7 +1018,13 @@ const translations = {
         "Crit.Hab": "Crit.Comp",
         "Penetrac": "Pénétration",
         "Gol.Crit": "Coup Crit",
-        "Res.Crit": "Rés.Crit"
+        "Res.Crit": "Rés.Crit",
+        "Puntos gastados": "Points dépensés",
+        "Niveles totales": "Niveaux totaux",
+        "Bonificaciones por stat": "Bonus de stats",
+        "Sin stats activos": "Pas de stats actifs",
+        "Guardado": "Enregistré",
+        "Porcentaje de inversión": "Pourcentage d'investissement"
     },
     de: {
         "Árbol de Tecnologías": "Technologiebaum",
@@ -1159,7 +1196,13 @@ const translations = {
         "Crit.Hab": "Crit.Hab",
         "Penetrac": "Penetração",
         "Gol.Crit": "Gol.Crit",
-        "Res.Crit": "Res.Crit"
+        "Res.Crit": "Res.Crit",
+        "Puntos gastados": "Pontos gastos",
+        "Niveles totales": "Níveis totais",
+        "Bonificaciones por stat": "Bônus de stats",
+        "Sin stats activos": "Sem stats ativos",
+        "Guardado": "Salvo",
+        "Porcentaje de inversión": "Percentual de investimento"
     },
     zh: {
         "Árbol de Tecnologías": "科技树",
@@ -3711,8 +3754,12 @@ function initBuildSystem() {
     buildsList.addEventListener('click', (e) => {
         e.stopPropagation();
         
-        if (e.target.classList.contains('load-build-btn')) {
-            const buildName = e.target.dataset.name;
+        // Usar closest() para asegurar que capturamos clics en botones
+        const loadBtn = e.target.closest('.load-build-btn');
+        const deleteBtn = e.target.closest('.delete-build-btn');
+        
+        if (loadBtn) {
+            const buildName = loadBtn.dataset.name;
             if (loadBuild(buildName)) {
                 const currentLang = localStorage.getItem('tech-tree-language') || 'es';
                 const texts = translations[currentLang] || translations.es;
@@ -3723,9 +3770,12 @@ function initBuildSystem() {
             }
         }
         
-        if (e.target.classList.contains('delete-build-btn')) {
-            const buildName = e.target.dataset.name;
-            if (confirm(`¿Eliminar la build "${buildName}"?`)) {
+        if (deleteBtn) {
+            const buildName = deleteBtn.dataset.name;
+            const currentLang = localStorage.getItem('tech-tree-language') || 'es';
+            const texts = translations[currentLang] || translations.es;
+            const confirmText = confirm(`¿Eliminar la build "${buildName}"?`);
+            if (confirmText) {
                 deleteBuild(buildName);
                 setLog(`Build "${buildName}" eliminada.`);
                 updateBuildsList();
@@ -4313,6 +4363,7 @@ window.addEventListener('load', () => {
     setTimeout(() => {
         initTranslation();
         initBuildSystem();
+        initComparator();
         initAutoSave();
         
         if (isMobile) {
@@ -4335,6 +4386,253 @@ window.addEventListener('load', () => {
         }, 1000);
     }, 100);
 });
+
+// =============================================================================
+// COMPARADOR DE BUILDS SIDE BY SIDE
+// =============================================================================
+function compGetLanguage() {
+    return localStorage.getItem('tech-tree-language') || 'es';
+}
+
+function compGetStatLabels() {
+    const lang = compGetLanguage();
+    const texts = translations[lang] || translations.es;
+    return {
+        "defensa": texts["Defensa"] || "Defensa",
+        "vida": texts["Vida"] || "Vida",
+        "ataque": texts["Ataque"] || "Ataque",
+        "defensa global": texts["Defensa Global"] || "Defensa Global",
+        "vida global": texts["Vida Global"] || "Vida Global",
+        "ataque global": texts["Ataque Global"] || "Ataque Global",
+        "esquivar": texts["Esquivar"] || "Esquivar",
+        "aturdir": texts["Aturdir"] || "Aturdir",
+        "ignorar esquivar": texts["Ignorar Esquivar"] || "Ignorar Esquivar",
+        "ignorar aturdir": texts["Ignorar Aturdir"] || "Ignorar Aturdir",
+        "ignorar penetración": texts["Ignorar Penetración"] || "Ignorar Penetración",
+        "ignorar contraataque": texts["Ignorar Contraataque"] || "Ignorar Contraataque",
+        "crítico de habilidad": texts["Crítico de Habilidad"] || "Crítico de Habilidad",
+        "penetración": texts["Penetración"] || "Penetración",
+        "golpe crítico": texts["Golpe Crítico"] || "Golpe Crítico",
+        "reflejo de daño": texts["Reflejo de Daño"] || "Reflejo de Daño",
+        "resistencia crítico habilidad": texts["Resist. Crítico Habilidad"] || "Resist. Crítico Habilidad",
+        "daño final": texts["Daño Final"] || "Daño Final"
+    };
+}
+
+function compGetBuildData(buildName) {
+    try { return JSON.parse(localStorage.getItem('tech_tree_build_' + buildName)); } catch(e) { return null; }
+}
+
+function compCalculateRealStats(buildData) {
+    // Crear un objeto de stats temporal usando la misma estructura que specificStats
+    const buildStats = {
+        "defensa": 0,
+        "vida": 0,
+        "ataque": 0,
+        "defensa global": 0,
+        "vida global": 0,
+        "ataque global": 0,
+        "esquivar": 0,
+        "aturdir": 0,
+        "ignorar esquivar": 0,
+        "ignorar aturdir": 0,
+        "ignorar penetración": 0,
+        "ignorar contraataque": 0,
+        "crítico de habilidad": 0,
+        "penetración": 0,
+        "golpe crítico": 0,
+        "reflejo de daño": 0,
+        "resistencia crítico habilidad": 0,
+        "daño final": 0
+    };
+    
+    let totalPointsSpent = buildData.totalPointsSpent || 0;
+    
+    // Usar exactamente la misma lógica que updateGlobalUI()
+    ['guardian', 'vanguardia', 'canon'].forEach(treeId => {
+        const treeData = buildData[treeId];
+        if (!treeData || !treeData.levels) return;
+        
+        Object.keys(treeData.levels).forEach(nodeId => {
+            const current = treeData.levels[nodeId]?.current || 0;
+            if (current <= 0) return;
+            
+            const cfg = getNodeConfig(nodeId);
+            if (!cfg) return;
+            
+            // Usar la misma función getStatInfoForNode
+            const statInfo = getStatInfoForNode(treeId, nodeId, current);
+            if (statInfo && statInfo.stat) {
+                const statKey = statInfo.stat.toLowerCase();
+                if (buildStats.hasOwnProperty(statKey)) {
+                    if (statKey === "daño final") {
+                        buildStats[statKey] += current;
+                    } else {
+                        buildStats[statKey] += statInfo.value;
+                    }
+                }
+            }
+        });
+    });
+    
+    return {
+        totals: buildStats,
+        totalPointsSpent: totalPointsSpent,
+        timestamp: buildData.timestamp || 'Sin fecha'
+    };
+}
+
+function compCmpClass(mine, theirs, higherBetter) {
+    if (theirs===null||theirs===undefined) return '';
+    if (mine===theirs) return 'equal';
+    return (higherBetter ? mine>theirs : mine<theirs) ? 'better' : 'worse';
+}
+
+function compPopulateSelects() {
+    var builds = getSavedBuilds();
+    ['comp-select-a','comp-select-b'].forEach(function(id) {
+        var sel = document.getElementById(id);
+        if (!sel) return;
+        var cur = sel.value;
+        sel.innerHTML = '<option value="">&#8212; Seleccionar build &#8212;</option>';
+        builds.forEach(function(b) {
+            var opt = document.createElement('option');
+            opt.value = b.name;
+            opt.textContent = b.name + ' (' + b.timestamp + ')';
+            sel.appendChild(opt);
+        });
+        if (cur) sel.value = cur;
+    });
+}
+
+function compRender() {
+    var nameA = (document.getElementById('comp-select-a')||{}).value||'';
+    var nameB = (document.getElementById('comp-select-b')||{}).value||'';
+    var colA = document.getElementById('comp-col-a');
+    var colB = document.getElementById('comp-col-b');
+    if (!colA||!colB) return;
+    
+    var dataA = nameA ? compGetBuildData(nameA) : null;
+    var dataB = nameB ? compGetBuildData(nameB) : null;
+    var statsA = dataA ? compCalculateRealStats(dataA) : null;
+    var statsB = dataB ? compCalculateRealStats(dataB) : null;
+    
+    const lang = compGetLanguage();
+    const texts = translations[lang] || translations.es;
+    const statLabels = compGetStatLabels();
+    
+    if (!statsA && !statsB) {
+        colA.innerHTML = '<div class="comp-empty">'+texts["Bonificaciones Activas"]+'</div>';
+        colB.innerHTML = '';
+        return;
+    }
+    
+    // Generar tabla de 3 columnas
+    let html = '<table class="comp-table" style="width:100%; border-collapse: collapse; font-size: 12px;">';
+    
+    // Encabezados
+    html += '<thead style="border-bottom: 2px solid #333;">';
+    html += '<tr>';
+    html += '<th style="text-align: left; padding: 8px; color: #aaa;">'+texts["Bonificaciones por stat"]+'</th>';
+    html += '<th style="text-align: center; padding: 8px; color: #1e90ff;">&#128309; '+nameA+'</th>';
+    html += '<th style="text-align: center; padding: 8px; color: #ff4757;">&#128308; '+nameB+'</th>';
+    html += '</tr>';
+    html += '</thead>';
+    
+    html += '<tbody>';
+    
+    // Fila de fecha guardada
+    html += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">';
+    html += '<td style="padding: 5px 8px; color: #888;">Guardado</td>';
+    html += '<td style="padding: 5px 8px; text-align: center; font-size: 10px; color: #aaa;">'+(statsA ? statsA.timestamp : '-')+'</td>';
+    html += '<td style="padding: 5px 8px; text-align: center; font-size: 10px; color: #aaa;">'+(statsB ? statsB.timestamp : '-')+'</td>';
+    html += '</tr>';
+    
+    // Fila de puntos gastados
+    var ptClassA = statsA && statsB ? compCmpClass(statsA.totalPointsSpent, statsB.totalPointsSpent, false) : '';
+    var ptClassB = statsB && statsA ? compCmpClass(statsB.totalPointsSpent, statsA.totalPointsSpent, false) : '';
+    html += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(50,50,80,0.3);">';
+    html += '<td style="padding: 5px 8px; color: #888;">&#127942; '+texts["Puntos gastados"]+'</td>';
+    html += '<td style="padding: 5px 8px; text-align: center; font-weight: bold;" class="'+ptClassA+'">'+(statsA ? statsA.totalPointsSpent.toLocaleString() : '-')+'</td>';
+    html += '<td style="padding: 5px 8px; text-align: center; font-weight: bold;" class="'+ptClassB+'">'+(statsB ? statsB.totalPointsSpent.toLocaleString() : '-')+'</td>';
+    html += '</tr>';
+    
+    // Filas de stats
+    const statKeys = [
+        "defensa", "vida", "ataque",
+        "defensa global", "vida global", "ataque global",
+        "esquivar", "aturdir",
+        "ignorar esquivar", "ignorar aturdir",
+        "ignorar penetración", "ignorar contraataque",
+        "crítico de habilidad", "penetración",
+        "golpe crítico", "reflejo de daño",
+        "resistencia crítico habilidad", "daño final"
+    ];
+    
+    var hasAny = false;
+    statKeys.forEach(function(key, idx) {
+        var mine = statsA ? statsA.totals[key] : 0;
+        var theirs = statsB ? statsB.totals[key] : 0;
+        if (mine===0&&theirs===0) return;
+        hasAny = true;
+        
+        var clsA = statsA && statsB ? compCmpClass(mine, theirs, true) : '';
+        var clsB = statsB && statsA ? compCmpClass(theirs, mine, true) : '';
+        
+        // Daño final es absoluto, otros son porcentaje
+        var displayA, displayB;
+        if (key === "daño final") {
+            displayA = statsA ? Math.round(mine) : '-';
+            displayB = statsB ? Math.round(theirs) : '-';
+        } else {
+            displayA = statsA ? (mine.toFixed(1) + '%') : '-';
+            displayB = statsB ? (theirs.toFixed(1) + '%') : '-';
+        }
+        
+        // Alternar color de fondo para mejor legibilidad
+        var bgColor = idx % 2 === 0 ? '' : 'background: rgba(50,50,80,0.2);';
+        html += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05); '+bgColor+'">';
+        html += '<td style="padding: 5px 8px; color: #aaa;">'+(statLabels[key]||key)+'</td>';
+        html += '<td style="padding: 5px 8px; text-align: center; font-weight: bold;" class="'+clsA+'">'+displayA+'</td>';
+        html += '<td style="padding: 5px 8px; text-align: center; font-weight: bold;" class="'+clsB+'">'+displayB+'</td>';
+        html += '</tr>';
+    });
+    
+    html += '</tbody>';
+    html += '</table>';
+    
+    if (!hasAny) {
+        html = '<div class="comp-empty">'+texts["Sin stats activos"]+'</div>';
+    }
+    
+    colA.innerHTML = html;
+    colB.innerHTML = '';
+}
+
+function compOpen() {
+    compPopulateSelects();
+    compRender();
+    var modal = document.getElementById('comparator-modal');
+    if (modal) { modal.classList.add('open'); document.body.style.overflow='hidden'; }
+}
+
+function compClose() {
+    var modal = document.getElementById('comparator-modal');
+    if (modal) { modal.classList.remove('open'); document.body.style.overflow=''; }
+}
+
+function initComparator() {
+    var openBtn = document.getElementById('open-comparator-btn');
+    var closeBtn = document.getElementById('close-comparator');
+    var modal = document.getElementById('comparator-modal');
+    var selA = document.getElementById('comp-select-a');
+    var selB = document.getElementById('comp-select-b');
+    if (openBtn) openBtn.addEventListener('click', compOpen);
+    if (closeBtn) closeBtn.addEventListener('click', compClose);
+    if (modal) modal.addEventListener('click', function(e){ if(e.target===modal) compClose(); });
+    if (selA) selA.addEventListener('change', compRender);
+    if (selB) selB.addEventListener('change', compRender);
+}
 </script>
 
 <!-- =============================================
